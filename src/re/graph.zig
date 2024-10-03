@@ -19,15 +19,9 @@ pub fn init(allocator: std.mem.Allocator, count: usize) !Graph {
         allocator.free(final);
         return e;
     };
-    for (begin) |*n| {
-        n.* = false;
-    }
-    for (final) |*n| {
-        n.* = false;
-    }
-    for (edges) |*e| {
-        e.* = Charset.init();
-    }
+    @memset(begin, false);
+    @memset(final, false);
+    @memset(edges, Charset.init());
     return .{
         .allocator = allocator,
         .begin = begin,

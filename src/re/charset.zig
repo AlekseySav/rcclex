@@ -65,6 +65,25 @@ pub fn add(s: Charset, c: u8) Charset {
     return new;
 }
 
+pub fn ipop(s: *Charset, c: u8) void {
+    s.c[c] = false;
+}
+
+pub fn pop(s: Charset, c: u8) Charset {
+    var new = s;
+    new.ipop(c);
+    return new;
+}
+
+pub fn empty(s: Charset) bool {
+    for (s.c) |c| {
+        if (c) {
+            return false;
+        }
+    }
+    return true;
+}
+
 pub fn iter(s: *const Charset) Iter {
     return .{ .s = s, .c = 0 };
 }
