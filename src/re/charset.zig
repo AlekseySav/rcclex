@@ -11,7 +11,9 @@ const Iter = struct {
             }
             it.c += 1;
         }
-        return it.c;
+        const c = it.c;
+        it.c += 1;
+        return c;
     }
 };
 
@@ -25,17 +27,44 @@ pub fn contains(s: Charset, c: u8) bool {
     return c < 128 and s.c[c];
 }
 
-pub fn addRange(s: *Charset, a: u8, b: u8) *Charset {
-    for (a..b + 1) |c| {
-        s.c[c] = true;
+pub fn imerge(s: *Charset, c: Charset) void {
+    for (0..128) |i| {
+        s.c[i] = s.c[i] or c.c[i];
     }
-    return s;
 }
 
-pub fn add(s: *Charset, c: u8) *Charset {
-    return s.addRange(c, c);
+pub fn merge(s: Charset, c: Charset) Charset {
+    var new = s;
+    new.imerge(c);
+    return new;
 }
 
-pub fn iter(s: Charset) Iter {
+pub fn addRange(s: Charset, a: u8, b: u8) Charset {
+    var new = s;
+    for (a..b + 1) |c| {
+        new.c[c] = true;
+    }
+    return new;
+}
+
+pub fn invert(s: Charset, superset: Charset) Charset {
+    var new = s;
+    for (0..128) |i| {
+        new.c[i] = !s.c[i] and superset.c[i];
+    }
+    return new;
+}
+
+pub fn iadd(s: *Charset, c: u8) void {
+    s.c[c] = true;
+}
+
+pub fn add(s: Charset, c: u8) Charset {
+    var new = s;
+    new.iadd(c);
+    return new;
+}
+
+pub fn iter(s: *const Charset) Iter {
     return .{ .s = s, .c = 0 };
 }

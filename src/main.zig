@@ -3,6 +3,8 @@ const Ymlz = @import("ymlz").Ymlz;
 
 const Input = @import("input.zig");
 const Charset = @import("re/charset.zig");
+const NFA = @import("re/nfa.zig");
+const Graph = @import("re/graph.zig");
 
 const UsageError = error{
     BadArgs,
@@ -31,16 +33,20 @@ pub fn main() !void {
             return UsageError.BadArgs;
         }
 
-        var ymlz = try Ymlz(Input).init(gpa.allocator());
         const yaml_path = try std.fs.cwd().realpathAlloc(gpa.allocator(), config.?);
         defer gpa.allocator().free(yaml_path);
 
+        var ymlz = try Ymlz(Input).init(gpa.allocator());
         const input = try ymlz.loadFile(yaml_path);
         defer ymlz.deinit(input);
 
         const pattern = try input.pattern(gpa.allocator());
         defer gpa.allocator().free(pattern);
+        const nfa = try NFA.init(gpa.allocator(), try input.charset(), pattern);
+        defer nfa.deinit();
 
-        std.debug.print("{} {} {s}\n", .{ input, try input.charset(), pattern });
+        const graph = try nfa.graph();
+        defer graph.deinit();
+        try graph.flush(std.io.getStdOut().writer().any());
     }
 }

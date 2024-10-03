@@ -47,7 +47,7 @@ pub fn charset(in: Input) !Charset {
     var s = Charset.init();
     for (in.config.charset.ranges) |c| {
         const p = try c.parse();
-        _ = s.addRange(p.a, p.b);
+        s = s.addRange(p.a, p.b);
     }
     return s;
 }
