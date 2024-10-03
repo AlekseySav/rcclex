@@ -91,9 +91,6 @@ fn removeEpsilons(nfa: *NFA) !void {
     for (0..nodes) |n| {
         if (!used[nodes - n - 1]) {
             try nfa.removeNode(nodes - n - 1);
-            const g = try nfa.graph();
-            defer g.deinit();
-            try g.flush(std.io.getStdOut().writer().any());
         }
     }
 }
@@ -130,6 +127,9 @@ fn visitDfs(nfa: *NFA, used: []bool, n: usize) void {
 fn removeNode(nfa: *NFA, n: usize) !void {
     const i = nfa.nodes.items.len - 1;
     if (n != i) {
+        if (nfa.begin == i) {
+            nfa.begin = n;
+        }
         nfa.final.items[n] = nfa.final.items[i];
         for (0..nfa.nodes.items.len) |p| {
             if (p != n) {
