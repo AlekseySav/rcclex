@@ -1,7 +1,11 @@
 .{
     .name = "rcclex",
     .version = "0.0.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .yaml = .{
+            .path = "deps/zig-yaml",
+        },
+    },
 
     .paths = .{
         "build.zig",
