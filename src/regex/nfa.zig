@@ -123,7 +123,7 @@ fn star(nfa: *Self, a: Slice) !Slice {
     return .{ .begin = n, .final = n };
 }
 
-const NodeIterator = struct {
+pub const NodeIterator = struct {
     slice: Slice,
     nodes: usize,
     i: usize,
@@ -142,7 +142,7 @@ pub fn nodeIterator(nfa: Self) NodeIterator {
     return .{ .slice = nfa.slice, .nodes = nfa.nodes, .i = 0 };
 }
 
-const EdgeIterator = struct {
+pub const EdgeIterator = struct {
     edges: []const Edge,
     i: usize,
 

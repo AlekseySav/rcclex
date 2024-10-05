@@ -119,7 +119,7 @@ fn swapNodes(nfa: *Self, a: usize, b: usize) void {
     }
 }
 
-const NodeIterator = struct {
+pub const NodeIterator = struct {
     nodes: usize,
     begin: usize,
     final: []const bool,
@@ -139,7 +139,7 @@ pub fn nodeIterator(nfa: Self) NodeIterator {
     return .{ .nodes = nfa.nodes.items.len, .begin = nfa.begin, .final = nfa.final.items, .i = 0 };
 }
 
-const EdgeIterator = struct {
+pub const EdgeIterator = struct {
     s: []const std.ArrayList(Charset),
     i: usize,
 

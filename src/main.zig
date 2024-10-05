@@ -17,5 +17,10 @@ pub fn main() !void {
     try nfa1.load(nfa);
     try nfa1.build();
 
+    var dfa = re.DFA.init(std.heap.page_allocator);
+    defer dfa.deinit();
+    try dfa.build(nfa1);
+
     try re.gv.print(nfa1, std.io.getStdOut().writer());
+    try re.gv.print(dfa, std.io.getStdOut().writer());
 }

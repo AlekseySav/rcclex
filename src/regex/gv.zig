@@ -28,7 +28,7 @@ pub fn print(g: anytype, w: anytype) !void {
     while (edges.next()) |e| {
         var it = e.charset.iterator();
         while (it.next()) |c| {
-            if (c >= ' ' and c < 127) {
+            if (c >= ' ' and c < 127 and c != '"' and c != '\\') {
                 try w.print("  {} -> {} [label=\"{c}\"];\n", .{ e.from + 1, e.to + 1, c });
             } else {
                 try w.print("  {} -> {} [label=\"\\\\{o}\"];\n", .{ e.from + 1, e.to + 1, c });

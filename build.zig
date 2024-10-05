@@ -2,8 +2,16 @@ const std = @import("std");
 
 pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
-
     const optimize = b.standardOptimizeOption(.{});
+
+    const zigset = b.dependency("zigset", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    const regex = b.createModule(.{
+        .root_source_file = b.path("src/regex/root.zig"),
+    });
+    regex.addImport("zigset", zigset.module("ziglangSet"));
 
     const exe = b.addExecutable(.{
         .name = "rcclex",
@@ -11,9 +19,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
-    exe.root_module.addImport("regex", b.createModule(.{
-        .root_source_file = b.path("src/regex/root.zig"),
-    }));
+    exe.root_module.addImport("regex", regex);
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);

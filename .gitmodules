@@ -1,0 +1,3 @@
+[submodule "deps/ziglang-set"]
+	path = deps/ziglang-set
+	url = https://github.com/deckarep/ziglang-set.git
