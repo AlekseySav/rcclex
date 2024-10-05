@@ -1,3 +1,6 @@
 [submodule "deps/ziglang-set"]
 	path = deps/ziglang-set
 	url = https://github.com/deckarep/ziglang-set.git
+[submodule "deps/ymlz"]
+	path = deps/ymlz
+	url = https://github.com/pwbh/ymlz.git

@@ -3,6 +3,7 @@
     .version = "0.0.1",
     .dependencies = .{
         .zigset = .{ .path = "deps/ziglang-set" },
+        .ymlz = .{ .path = "deps/ymlz" },
     },
     .paths = .{
         "build.zig",

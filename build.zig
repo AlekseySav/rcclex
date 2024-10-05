@@ -4,10 +4,15 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const ymlz = b.dependency("ymlz", .{
+        .target = target,
+        .optimize = optimize,
+    });
     const zigset = b.dependency("zigset", .{
         .target = target,
         .optimize = optimize,
     });
+
     const regex = b.createModule(.{
         .root_source_file = b.path("src/regex/root.zig"),
     });
@@ -19,6 +24,7 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    exe.root_module.addImport("ymlz", ymlz.module("root"));
     exe.root_module.addImport("regex", regex);
     b.installArtifact(exe);
 
