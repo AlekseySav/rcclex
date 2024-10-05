@@ -11,14 +11,12 @@ const MaxChar = 128;
 alloc: std.mem.Allocator,
 nodes: std.ArrayList([MaxChar]usize),
 final: std.ArrayList(bool),
-begin: usize,
 
 pub fn init(a: std.mem.Allocator) Self {
     return .{
         .alloc = a,
         .nodes = std.ArrayList([MaxChar]usize).init(a),
         .final = std.ArrayList(bool).init(a),
-        .begin = undefined,
     };
 }
 
@@ -40,8 +38,7 @@ pub fn build(s: *Self, nfa: NFA1) !void {
 
     var beginState = Set(usize).init(s.alloc);
     _ = try beginState.add(nfa.begin);
-    s.begin = try s.node(nfa, &output, beginState);
-    try queue.push(s.begin);
+    try queue.push(try s.node(nfa, &output, beginState));
 
     while (queue.pop()) |a| {
         for (0..MaxChar) |c| {
@@ -70,6 +67,20 @@ pub fn build(s: *Self, nfa: NFA1) !void {
             const n = try s.node(nfa, &output, bState);
             try queue.push(n);
             s.nodes.items[a][c] = n;
+        }
+    }
+}
+
+pub fn complete(s: *Self, c: Charset) !void {
+    const r = s.nodes.items.len;
+    try s.nodes.append([_]usize{std.math.maxInt(usize)} ** MaxChar);
+    try s.final.append(false);
+
+    for (s.nodes.items) |*a| {
+        for (a, 0..) |*b, i| {
+            if (c.contains(@intCast(i)) and b.* > r) {
+                b.* = r;
+            }
         }
     }
 }
@@ -125,7 +136,7 @@ fn Queue(comptime T: type) type {
 }
 
 pub fn nodeIterator(nfa: Self) NFA1.NodeIterator {
-    return .{ .nodes = nfa.nodes.items.len, .begin = nfa.begin, .final = nfa.final.items, .i = 0 };
+    return .{ .nodes = nfa.nodes.items.len, .begin = 0, .final = nfa.final.items, .i = 0 };
 }
 
 pub const EdgeIterator = struct {

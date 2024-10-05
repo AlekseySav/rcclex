@@ -4,7 +4,7 @@ const re = @import("regex");
 pub fn main() !void {
     var lex = re.Lexer{
         .i = 0,
-        .charset = re.Charset.range(' ', '~'),
+        .charset = re.Charset.range('a', 'c'),
         .pattern = "a(bc|b*\\*)",
     };
 
@@ -20,7 +20,7 @@ pub fn main() !void {
     var dfa = re.DFA.init(std.heap.page_allocator);
     defer dfa.deinit();
     try dfa.build(nfa1);
+    try dfa.complete(lex.charset);
 
-    try re.gv.print(nfa1, std.io.getStdOut().writer());
     try re.gv.print(dfa, std.io.getStdOut().writer());
 }
