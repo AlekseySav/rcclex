@@ -1,52 +1,25 @@
 const std = @import("std");
-const Ymlz = @import("ymlz").Ymlz;
-
-const Input = @import("input.zig");
-const Charset = @import("re/charset.zig");
-const NFA = @import("re/nfa.zig");
-const Graph = @import("re/graph.zig");
-
-const UsageError = error{
-    BadArgs,
-};
+const Charset = @import("regex/charset.zig");
+const gv = @import("regex/gv.zig");
+const Lexer = @import("regex/lexer.zig");
+const NFA = @import("regex/nfa.zig");
+const NFA1 = @import("regex/nfa-1.zig");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer {
-        if (gpa.deinit() == .leak) {
-            @panic("leaks detected");
-        }
-    }
+    var lex = Lexer{
+        .i = 0,
+        .charset = Charset.range(' ', '~'),
+        .pattern = "a(bc|b*\\*)",
+    };
 
-    {
-        var config: ?[]const u8 = null;
-        var args = try std.process.ArgIterator.initWithAllocator(gpa.allocator());
-        defer args.deinit();
-        _ = args.skip();
-        while (args.next()) |arg| {
-            if (config != null) {
-                return UsageError.BadArgs;
-            }
-            config = arg;
-        }
-        if (config == null) {
-            return UsageError.BadArgs;
-        }
+    var nfa = NFA.init(std.heap.page_allocator);
+    defer nfa.deinit();
+    try nfa.build(&lex);
 
-        const yaml_path = try std.fs.cwd().realpathAlloc(gpa.allocator(), config.?);
-        defer gpa.allocator().free(yaml_path);
+    var nfa1 = NFA1.init(std.heap.page_allocator);
+    defer nfa1.deinit();
+    try nfa1.load(nfa);
+    try nfa1.build();
 
-        var ymlz = try Ymlz(Input).init(gpa.allocator());
-        const input = try ymlz.loadFile(yaml_path);
-        defer ymlz.deinit(input);
-
-        const pattern = try input.pattern(gpa.allocator());
-        defer gpa.allocator().free(pattern);
-        const nfa = try NFA.init(gpa.allocator(), try input.charset(), pattern);
-        defer nfa.deinit();
-
-        const graph = try nfa.graph();
-        defer graph.deinit();
-        try graph.flush(std.io.getStdOut().writer().any());
-    }
+    try gv.print(nfa1, std.io.getStdOut().writer());
 }

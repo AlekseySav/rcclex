@@ -1,3 +1,0 @@
-[submodule "deps/ymlz"]
-	path = deps/ymlz
-	url = https://github.com/pwbh/ymlz.git

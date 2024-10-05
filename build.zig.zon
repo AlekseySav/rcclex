@@ -1,11 +1,7 @@
 .{
     .name = "rcclex",
     .version = "0.0.1",
-    .dependencies = .{
-        .ymlz = .{
-            .path = "deps/ymlz",
-        },
-    },
+    .dependencies = .{},
     .paths = .{
         "build.zig",
         "build.zig.zon",

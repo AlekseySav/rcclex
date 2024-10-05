@@ -1,3 +1,3 @@
 test {
-    _ = @import("io.zig");
+    _ = @import("regex/charset.zig");
 }

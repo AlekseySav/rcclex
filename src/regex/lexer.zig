@@ -1,36 +1,42 @@
 const std = @import("std");
 const Charset = @import("charset.zig");
 
-const Lexer = @This();
+const Self = @This();
 
-const ParseError = error{
+pub const ParseError = error{
     BadChar,
     UnexpectedEnd,
     BadCharset,
+    BadBraceBalance,
+    BadExpr,
 };
 
 const Token = struct {
     type: u8,
     charset: Charset,
 
-    pub fn format(t: Token, comptime _: []const u8, _: std.fmt.FormatOptions, writer: anytype) !void {
+    pub fn format(t: Token, comptime _: []const u8, _: std.fmt.FormatOptions, w: anytype) !void {
         if (t.type != '.') {
-            return writer.print("{c}", .{t.type});
+            return w.print("{c}", .{t.type});
         }
-        var it = t.charset.iter();
-        try writer.print("[", .{});
+        var it = t.charset.iterator();
+        try w.print("[", .{});
         while (it.next()) |c| {
-            try writer.print("{c}", .{c});
+            if (c >= ' ' and c < 127) {
+                try w.print("{c}", .{c});
+            } else {
+                try w.print("\\{o}", .{c});
+            }
         }
-        try writer.print("]", .{});
+        try w.print("]", .{});
     }
 };
 
 charset: Charset,
 pattern: []const u8,
-i: u32,
+i: usize,
 
-pub fn token(lex: *Lexer) !?Token {
+pub fn token(lex: *Self) !?Token {
     const c = lex.char();
     return switch (c) {
         0 => null,
@@ -41,13 +47,13 @@ pub fn token(lex: *Lexer) !?Token {
     };
 }
 
-fn dec(lex: *Lexer) void {
+fn dec(lex: *Self) void {
     if (lex.i != lex.pattern.len) {
         lex.i -= 1;
     }
 }
 
-fn char(lex: *Lexer) u8 {
+fn char(lex: *Self) u8 {
     if (lex.i == lex.pattern.len) {
         return 0;
     }
@@ -55,7 +61,7 @@ fn char(lex: *Lexer) u8 {
     return lex.pattern[lex.i - 1];
 }
 
-fn onechar(lex: *Lexer, c: u8) !Charset {
+fn onechar(lex: *Self, c: u8) !Charset {
     if (c == 0) {
         return ParseError.UnexpectedEnd;
     }
@@ -65,10 +71,10 @@ fn onechar(lex: *Lexer, c: u8) !Charset {
     if (!lex.charset.contains(c)) {
         return ParseError.BadChar;
     }
-    return Charset.init().add(c);
+    return Charset.char(c);
 }
 
-fn chars(lex: *Lexer) !Charset {
+fn chars(lex: *Self) !Charset {
     var s = Charset.init();
     var p: u8 = 0;
 
@@ -82,46 +88,52 @@ fn chars(lex: *Lexer) !Charset {
     while (c != ']') {
         if (c == '-') {
             const endset = try lex.onechar(lex.char());
-            var it = endset.iter();
+            var it = endset.iterator();
             const e = it.next();
             if (p == 0 or e == null or p >= e.? or it.next() != null) {
                 return ParseError.BadCharset;
             }
-            s = s.addRange(p, e.?);
+            s = s.add(Charset.range(p, e.?));
         } else {
-            s = s.merge(try lex.onechar(c));
+            s = s.add(try lex.onechar(c));
         }
         p = c;
         c = lex.char();
     }
 
     if (invert) {
-        s = s.invert(lex.charset);
+        s = s.inv().int(lex.charset);
     }
     return s;
 }
 
-fn escchar(lex: *Lexer) !Charset {
+const charLF = Charset.char('\n');
+const charHT = Charset.char('\t');
+const charCR = Charset.char('\r');
+const charD = Charset.range('0', '9');
+const charW = Charset.range('a', 'z').add(Charset.range('A', 'Z'));
+
+fn escchar(lex: *Self) !Charset {
     const c = lex.char();
     if (c == 0) {
         return ParseError.UnexpectedEnd;
     }
     return switch (c) {
-        't' => Charset.init().add('\t'),
-        'n' => Charset.init().add('\n'),
-        'r' => Charset.init().add('\r'),
-        'd' => Charset.init().addRange('0', '9'),
-        'D' => Charset.init().addRange('0', '9').invert(lex.charset),
-        's' => Charset.init().add('\r').add('\t').add('\n').add(' '),
-        'S' => Charset.init().add('\r').add('\t').add('\n').add(' ').invert(lex.charset),
-        'w' => Charset.init().addRange('0', '9').addRange('A', 'Z').addRange('a', 'z').add('_'),
-        'W' => Charset.init().addRange('0', '9').addRange('A', 'Z').addRange('a', 'z').add('_').invert(lex.charset),
-        '0', '1', '2', '3', '4', '5', '6', '7' => Charset.init().add(lex.atoi(c)),
-        else => Charset.init().add(c),
+        'n' => charLF,
+        't' => charHT,
+        'r' => charCR,
+        'd' => charD,
+        'D' => charD.inv().int(lex.charset),
+        's' => Charset.char(' ').add(charCR).add(charLF).add(charHT),
+        'S' => Charset.char(' ').add(charCR).add(charLF).add(charHT).inv().int(lex.charset),
+        'w' => Charset.char('_').add(charD).add(charW),
+        'W' => Charset.char('_').add(charD).add(charW).inv().int(lex.charset),
+        '0', '1', '2', '3', '4', '5', '6', '7' => Charset.char(lex.atoi(c)),
+        else => Charset.char(c),
     };
 }
 
-fn atoi(lex: *Lexer, ch: u8) u8 {
+fn atoi(lex: *Self, ch: u8) u8 {
     var c = ch;
     var res: u8 = 0;
     while (c >= '0' and c <= '7') {
