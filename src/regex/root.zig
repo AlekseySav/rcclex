@@ -1,14 +1,39 @@
 const std = @import("std");
 
+const Lexer = @import("lexer.zig");
+const NFA = @import("nfa.zig");
+const NFA1 = @import("nfa-1.zig");
+const DFA = @import("dfa.zig");
+const Automation = @import("automation.zig");
+
 pub const gv = @import("gv.zig");
 pub const Charset = @import("charset.zig");
-
-pub const Lexer = @import("lexer.zig");
-pub const NFA = @import("nfa.zig");
-pub const NFA1 = @import("nfa-1.zig");
-pub const DFA = @import("dfa.zig");
 
 pub const Config = struct {
     charset: Charset,
     pattern: []const u8,
 };
+
+pub fn compile(alloc: std.mem.Allocator, c: Config) !Automation {
+    var lex = Lexer{
+        .charset = c.charset,
+        .pattern = c.pattern,
+        .i = 0,
+    };
+    var nfa = NFA.init(alloc);
+    defer nfa.deinit();
+    try nfa.build(&lex);
+    var nfa1 = NFA1.init(alloc);
+    defer nfa1.deinit();
+    try nfa1.load(nfa);
+    try nfa1.build();
+    var dfa = DFA.init(alloc);
+    defer dfa.deinit();
+    try dfa.build(nfa1);
+    try dfa.complete(c.charset);
+    return .{
+        .alloc = alloc,
+        .nodes = try dfa.nodes.toOwnedSlice(),
+        .final = try dfa.final.toOwnedSlice(),
+    };
+}

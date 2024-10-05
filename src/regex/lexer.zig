@@ -1,15 +1,8 @@
 const std = @import("std");
+const ParseError = @import("common.zig").ParseError;
 const Charset = @import("charset.zig");
 
 const Self = @This();
-
-pub const ParseError = error{
-    BadChar,
-    UnexpectedEnd,
-    BadCharset,
-    BadBraceBalance,
-    BadExpr,
-};
 
 const Token = struct {
     type: u8,

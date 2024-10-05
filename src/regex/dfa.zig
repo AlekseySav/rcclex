@@ -3,19 +3,18 @@ const Set = @import("zigset").Set;
 const NFA1 = @import("nfa-1.zig");
 const Charset = @import("charset.zig");
 const gv = @import("gv.zig");
+const common = @import("common.zig");
 
 const Self = @This();
 
-const MaxChar = 128;
-
 alloc: std.mem.Allocator,
-nodes: std.ArrayList([MaxChar]usize),
+nodes: std.ArrayList([common.MaxChar]usize),
 final: std.ArrayList(bool),
 
 pub fn init(a: std.mem.Allocator) Self {
     return .{
         .alloc = a,
-        .nodes = std.ArrayList([MaxChar]usize).init(a),
+        .nodes = std.ArrayList([common.MaxChar]usize).init(a),
         .final = std.ArrayList(bool).init(a),
     };
 }
@@ -41,7 +40,7 @@ pub fn build(s: *Self, nfa: NFA1) !void {
     try queue.push(try s.node(nfa, &output, beginState));
 
     while (queue.pop()) |a| {
-        for (0..MaxChar) |c| {
+        for (0..common.MaxChar) |c| {
             const aState = output.items[a];
 
             var bState = Set(usize).init(s.alloc);
@@ -73,7 +72,7 @@ pub fn build(s: *Self, nfa: NFA1) !void {
 
 pub fn complete(s: *Self, c: Charset) !void {
     const r = s.nodes.items.len;
-    try s.nodes.append([_]usize{std.math.maxInt(usize)} ** MaxChar);
+    try s.nodes.append([_]usize{std.math.maxInt(usize)} ** common.MaxChar);
     try s.final.append(false);
 
     for (s.nodes.items) |*a| {
@@ -96,7 +95,7 @@ fn find(list: std.ArrayList(Set(usize)), v: Set(usize)) ?usize {
 
 fn node(s: *Self, nfa: NFA1, output: *std.ArrayList(Set(usize)), state: Set(usize)) !usize {
     const r = s.nodes.items.len;
-    try s.nodes.append([_]usize{std.math.maxInt(usize)} ** MaxChar);
+    try s.nodes.append([_]usize{std.math.maxInt(usize)} ** common.MaxChar);
     try s.final.append(false);
 
     try output.append(state);
@@ -140,15 +139,15 @@ pub fn nodeIterator(nfa: Self) NFA1.NodeIterator {
 }
 
 pub const EdgeIterator = struct {
-    s: []const [MaxChar]usize,
+    s: []const [common.MaxChar]usize,
     i: usize,
 
     pub fn next(it: *EdgeIterator) ?gv.Edge {
-        if (it.i == it.s.len * MaxChar) {
+        if (it.i == it.s.len * common.MaxChar) {
             return null;
         }
-        const a = it.i / MaxChar;
-        const c = it.i % MaxChar;
+        const a = it.i / common.MaxChar;
+        const c = it.i % common.MaxChar;
         const b = it.s[a][c];
         it.i += 1;
         if (b >= it.s.len) {

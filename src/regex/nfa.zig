@@ -1,6 +1,7 @@
 const std = @import("std");
 const Charset = @import("charset.zig");
 const Lexer = @import("lexer.zig");
+const ParseError = @import("common.zig").ParseError;
 const gv = @import("gv.zig");
 
 const Self = @This();
@@ -71,14 +72,14 @@ fn compile(nfa: *Self, lexer: *Lexer, level: u32) !Slice {
         }
     }
     if ((level == 0 and cbrace) or (level != 0 and !cbrace)) {
-        return Lexer.ParseError.BadBraceBalance;
+        return ParseError.BadBraceBalance;
     }
     for (1..concats) |_| {
         const b = queue.pop();
         try queue.append(try nfa.concat(queue.pop(), b));
     }
     if (queue.items.len == 0) {
-        return Lexer.ParseError.BadExpr;
+        return ParseError.BadExpr;
     }
     while (queue.items.len > 1) {
         const b = queue.pop();
