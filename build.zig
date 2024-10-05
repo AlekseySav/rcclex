@@ -11,6 +11,9 @@ pub fn build(b: *std.Build) void {
         .target = target,
         .optimize = optimize,
     });
+    exe.root_module.addImport("regex", b.createModule(.{
+        .root_source_file = b.path("src/regex/root.zig"),
+    }));
     b.installArtifact(exe);
 
     const run_cmd = b.addRunArtifact(exe);
