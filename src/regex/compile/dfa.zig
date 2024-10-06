@@ -10,12 +10,12 @@ nodes: std.ArrayList([]usize),
 final: std.ArrayList(bool),
 maxChar: usize,
 
-pub fn init(a: std.mem.Allocator, maxChar: usize) Self {
+pub fn init(a: std.mem.Allocator, s: Charset) Self {
     return .{
         .alloc = a,
         .nodes = std.ArrayList([]usize).init(a),
         .final = std.ArrayList(bool).init(a),
-        .maxChar = maxChar,
+        .maxChar = s.maxChar(),
     };
 }
 

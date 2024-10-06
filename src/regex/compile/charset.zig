@@ -46,6 +46,14 @@ pub fn iterator(a: Self) It {
     return .{ .m = a.m, .c = 0, .done = false };
 }
 
+pub fn maxChar(a: Self) usize {
+    var c: u8 = 255;
+    while (c > 0 and !a.contains(c)) {
+        c -= 1;
+    }
+    return @as(usize, c) + 1;
+}
+
 fn bit(c: u8) u256 {
     return @as(u256, 1) << c;
 }

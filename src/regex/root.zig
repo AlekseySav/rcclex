@@ -26,7 +26,7 @@ pub fn compile(alloc: std.mem.Allocator, c: Config) !Regex {
     defer nfa1.deinit();
     try nfa1.load(nfa);
     try nfa1.build();
-    var dfa = DFA.init(alloc, 128);
+    var dfa = DFA.init(alloc, c.charset);
     defer dfa.deinit();
     try dfa.build(nfa1);
     try dfa.complete(c.charset);
@@ -34,5 +34,6 @@ pub fn compile(alloc: std.mem.Allocator, c: Config) !Regex {
         .alloc = alloc,
         .nodes = try dfa.nodes.toOwnedSlice(),
         .final = try dfa.final.toOwnedSlice(),
+        .maxch = dfa.maxChar,
     };
 }

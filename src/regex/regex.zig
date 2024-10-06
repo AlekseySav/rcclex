@@ -6,6 +6,7 @@ const Self = @This();
 alloc: std.mem.Allocator,
 nodes: []const []const usize,
 final: []const bool,
+maxch: usize,
 
 pub fn deinit(s: Self) void {
     s.alloc.free(s.nodes);
@@ -28,20 +29,21 @@ const NodeIterator = struct {
     }
 };
 
-pub fn nodeIterator(nfa: Self) NodeIterator {
-    return .{ .nodes = nfa.nodes.len, .begin = 0, .final = nfa.final, .i = 0 };
+pub fn nodeIterator(s: Self) NodeIterator {
+    return .{ .nodes = s.nodes.len, .begin = 0, .final = s.final, .i = 0 };
 }
 
 const EdgeIterator = struct {
     s: []const []const usize,
     i: usize,
+    m: usize,
 
     pub fn next(it: *EdgeIterator) ?gv.Edge {
-        if (it.i == it.s.len * it.s[0].len) {
+        if (it.i == it.s.len * it.m) {
             return null;
         }
-        const a = it.i / it.s[0].len;
-        const c = it.i % it.s[0].len;
+        const a = it.i / it.m;
+        const c = it.i % it.m;
         const b = it.s[a][c];
         it.i += 1;
         if (b >= it.s.len) {
@@ -51,6 +53,6 @@ const EdgeIterator = struct {
     }
 };
 
-pub fn edgeIterator(nfa: Self) EdgeIterator {
-    return .{ .s = nfa.nodes, .i = 0 };
+pub fn edgeIterator(s: Self) EdgeIterator {
+    return .{ .s = s.nodes, .i = 0, .m = s.maxch };
 }
