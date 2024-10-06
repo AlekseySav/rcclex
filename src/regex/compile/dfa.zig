@@ -2,7 +2,6 @@ const std = @import("std");
 const Set = @import("zigset").Set;
 const NFA1 = @import("nfa-1.zig");
 const Charset = @import("charset.zig");
-const gv = @import("gv.zig");
 const common = @import("common.zig");
 
 const Self = @This();
@@ -132,31 +131,4 @@ fn Queue(comptime T: type) type {
             return q.impl.readItem();
         }
     };
-}
-
-pub fn nodeIterator(nfa: Self) NFA1.NodeIterator {
-    return .{ .nodes = nfa.nodes.items.len, .begin = 0, .final = nfa.final.items, .i = 0 };
-}
-
-pub const EdgeIterator = struct {
-    s: []const [common.MaxChar]usize,
-    i: usize,
-
-    pub fn next(it: *EdgeIterator) ?gv.Edge {
-        if (it.i == it.s.len * common.MaxChar) {
-            return null;
-        }
-        const a = it.i / common.MaxChar;
-        const c = it.i % common.MaxChar;
-        const b = it.s[a][c];
-        it.i += 1;
-        if (b >= it.s.len) {
-            return it.next();
-        }
-        return .{ .from = a, .to = b, .charset = Charset.char(@intCast(c)) };
-    }
-};
-
-pub fn edgeIterator(nfa: Self) EdgeIterator {
-    return .{ .s = nfa.nodes.items, .i = 0 };
 }

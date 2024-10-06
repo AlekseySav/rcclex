@@ -1,5 +1,4 @@
 const std = @import("std");
-const Charset = @import("charset.zig");
 
 pub const Node = struct {
     id: usize,
@@ -10,7 +9,7 @@ pub const Node = struct {
 pub const Edge = struct {
     from: usize,
     to: usize,
-    charset: Charset,
+    char: u8,
 };
 
 pub fn print(g: anytype, w: anytype) !void {
@@ -26,13 +25,10 @@ pub fn print(g: anytype, w: anytype) !void {
     }
     try w.print("\n", .{});
     while (edges.next()) |e| {
-        var it = e.charset.iterator();
-        while (it.next()) |c| {
-            if (c >= ' ' and c < 127 and c != '"' and c != '\\') {
-                try w.print("  {} -> {} [label=\"{c}\"];\n", .{ e.from + 1, e.to + 1, c });
-            } else {
-                try w.print("  {} -> {} [label=\"\\\\{o}\"];\n", .{ e.from + 1, e.to + 1, c });
-            }
+        if (e.char >= ' ' and e.char < 127 and e.char != '"' and e.char != '\\') {
+            try w.print("  {} -> {} [label=\"{c}\"];\n", .{ e.from + 1, e.to + 1, e.char });
+        } else {
+            try w.print("  {} -> {} [label=\"\\\\{o}\"];\n", .{ e.from + 1, e.to + 1, e.char });
         }
     }
     try w.print("}}\n", .{});

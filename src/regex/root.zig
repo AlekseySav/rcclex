@@ -1,20 +1,19 @@
 const std = @import("std");
+const Lexer = @import("compile/lexer.zig");
+const NFA = @import("compile/nfa.zig");
+const NFA1 = @import("compile/nfa-1.zig");
+const DFA = @import("compile/dfa.zig");
 
-const Lexer = @import("lexer.zig");
-const NFA = @import("nfa.zig");
-const NFA1 = @import("nfa-1.zig");
-const DFA = @import("dfa.zig");
-const Automation = @import("automation.zig");
-
+pub const Charset = @import("compile/charset.zig");
+pub const Regex = @import("regex.zig");
 pub const gv = @import("gv.zig");
-pub const Charset = @import("charset.zig");
 
 pub const Config = struct {
     charset: Charset,
     pattern: []const u8,
 };
 
-pub fn compile(alloc: std.mem.Allocator, c: Config) !Automation {
+pub fn compile(alloc: std.mem.Allocator, c: Config) !Regex {
     var lex = Lexer{
         .charset = c.charset,
         .pattern = c.pattern,

@@ -2,7 +2,6 @@ const std = @import("std");
 const Charset = @import("charset.zig");
 const Lexer = @import("lexer.zig");
 const ParseError = @import("common.zig").ParseError;
-const gv = @import("gv.zig");
 
 const Self = @This();
 
@@ -122,41 +121,4 @@ fn star(nfa: *Self, a: Slice) !Slice {
     try nfa.edge(n, a.begin, Charset.char(0));
     try nfa.edge(a.final, n, Charset.char(0));
     return .{ .begin = n, .final = n };
-}
-
-pub const NodeIterator = struct {
-    slice: Slice,
-    nodes: usize,
-    i: usize,
-
-    pub fn next(it: *NodeIterator) ?gv.Node {
-        const i = it.i;
-        if (i == it.nodes) {
-            return null;
-        }
-        it.i += 1;
-        return .{ .id = i, .begin = it.slice.begin == i, .final = it.slice.final == i };
-    }
-};
-
-pub fn nodeIterator(nfa: Self) NodeIterator {
-    return .{ .slice = nfa.slice, .nodes = nfa.nodes, .i = 0 };
-}
-
-pub const EdgeIterator = struct {
-    edges: []const Edge,
-    i: usize,
-
-    pub fn next(it: *EdgeIterator) ?gv.Edge {
-        if (it.i == it.edges.len) {
-            return null;
-        }
-        const e = it.edges[it.i];
-        it.i += 1;
-        return .{ .from = e.a, .to = e.b, .charset = e.c };
-    }
-};
-
-pub fn edgeIterator(nfa: Self) EdgeIterator {
-    return .{ .edges = nfa.edges.items, .i = 0 };
 }

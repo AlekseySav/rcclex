@@ -1,7 +1,6 @@
 const std = @import("std");
 const Charset = @import("charset.zig");
 const NFA = @import("nfa.zig");
-const gv = @import("gv.zig");
 
 const Self = @This();
 
@@ -117,47 +116,4 @@ fn swapNodes(nfa: *Self, a: usize, b: usize) void {
     for (0..nfa.nodes.items.len) |i| {
         swap(Charset).ptr(&nfa.nodes.items[i].items[a], &nfa.nodes.items[i].items[b]);
     }
-}
-
-pub const NodeIterator = struct {
-    nodes: usize,
-    begin: usize,
-    final: []const bool,
-    i: usize,
-
-    pub fn next(it: *NodeIterator) ?gv.Node {
-        const i = it.i;
-        if (i == it.nodes) {
-            return null;
-        }
-        it.i += 1;
-        return .{ .id = i, .begin = it.begin == i, .final = it.final[i] };
-    }
-};
-
-pub fn nodeIterator(nfa: Self) NodeIterator {
-    return .{ .nodes = nfa.nodes.items.len, .begin = nfa.begin, .final = nfa.final.items, .i = 0 };
-}
-
-pub const EdgeIterator = struct {
-    s: []const std.ArrayList(Charset),
-    i: usize,
-
-    pub fn next(it: *EdgeIterator) ?gv.Edge {
-        if (it.i == it.s.len * it.s.len) {
-            return null;
-        }
-        const a = it.i / it.s.len;
-        const b = it.i % it.s.len;
-        const c = it.s[a].items[b];
-        it.i += 1;
-        if (c.empty()) {
-            return it.next();
-        }
-        return .{ .from = a, .to = b, .charset = c };
-    }
-};
-
-pub fn edgeIterator(nfa: Self) EdgeIterator {
-    return .{ .s = nfa.nodes.items, .i = 0 };
 }
