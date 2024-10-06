@@ -12,9 +12,45 @@ pub const Edge = struct {
     char: u8,
 };
 
+const NodeIterator = struct {
+    nodes: usize,
+    begin: usize,
+    final: []const bool,
+    i: usize,
+
+    pub fn next(it: *NodeIterator) ?Node {
+        const i = it.i;
+        if (i == it.nodes) {
+            return null;
+        }
+        it.i += 1;
+        return .{ .id = i, .begin = it.begin == i, .final = it.final[i] };
+    }
+};
+
+const EdgeIterator = struct {
+    s: []const []const usize,
+    i: usize,
+    m: usize,
+
+    pub fn next(it: *EdgeIterator) ?Edge {
+        if (it.i == it.s.len * it.m) {
+            return null;
+        }
+        const a = it.i / it.m;
+        const c = it.i % it.m;
+        const b = it.s[a][c];
+        it.i += 1;
+        if (b >= it.s.len) {
+            return it.next();
+        }
+        return .{ .from = a, .to = b, .char = @intCast(c) };
+    }
+};
+
 pub fn print(g: anytype, w: anytype) !void {
-    var nodes = g.nodeIterator();
-    var edges = g.edgeIterator();
+    var nodes = nodeIterator(g);
+    var edges = edgeIterator(g);
     try w.print("digraph {{\n", .{});
     try w.print("  0 [shape=point];\n", .{});
     while (nodes.next()) |n| {
@@ -32,4 +68,12 @@ pub fn print(g: anytype, w: anytype) !void {
         }
     }
     try w.print("}}\n", .{});
+}
+
+fn nodeIterator(s: anytype) NodeIterator {
+    return .{ .nodes = s.nodes.len, .begin = 0, .final = s.final, .i = 0 };
+}
+
+fn edgeIterator(s: anytype) EdgeIterator {
+    return .{ .s = s.nodes, .i = 0, .m = s.maxch };
 }

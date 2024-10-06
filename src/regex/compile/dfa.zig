@@ -1,6 +1,6 @@
 const std = @import("std");
 const Set = @import("zigset").Set;
-const NFA1 = @import("nfa-1.zig");
+const NFA1 = @import("nfa1.zig");
 const Charset = @import("charset.zig");
 
 const Self = @This();

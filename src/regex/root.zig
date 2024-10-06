@@ -1,11 +1,6 @@
 const std = @import("std");
-const Lexer = @import("compile/lexer.zig");
-const NFA = @import("compile/nfa.zig");
-const NFA1 = @import("compile/nfa-1.zig");
-const DFA = @import("compile/dfa.zig");
 
 pub const Charset = @import("compile/charset.zig");
-pub const Regex = @import("regex.zig");
 pub const gv = @import("gv.zig");
 
 pub const Config = struct {
@@ -13,7 +8,36 @@ pub const Config = struct {
     pattern: []const u8,
 };
 
+pub const Regex = struct {
+    alloc: std.mem.Allocator,
+    nodes: []const []const usize,
+    final: []const bool,
+    maxch: usize,
+    state: usize,
+
+    pub fn deinit(s: Regex) void {
+        for (s.nodes) |n| {
+            s.alloc.free(n);
+        }
+        s.alloc.free(s.nodes);
+        s.alloc.free(s.final);
+    }
+
+    pub fn feed(s: *Regex, c: u8) bool {
+        if (c >= s.maxch) {
+            return false;
+        }
+        s.state = s.nodes[s.state][c];
+        return s.state != s.nodes.len - 1;
+    }
+};
+
 pub fn compile(alloc: std.mem.Allocator, c: Config) !Regex {
+    const Lexer = @import("compile/lexer.zig");
+    const NFA = @import("compile/nfa.zig");
+    const NFA1 = @import("compile/nfa1.zig");
+    const DFA = @import("compile/dfa.zig");
+
     var lex = Lexer{
         .charset = c.charset,
         .pattern = c.pattern,
@@ -34,6 +58,7 @@ pub fn compile(alloc: std.mem.Allocator, c: Config) !Regex {
         .alloc = alloc,
         .nodes = try dfa.nodes.toOwnedSlice(),
         .final = try dfa.final.toOwnedSlice(),
-        .maxch = dfa.maxChar,
+        .maxch = c.charset.maxChar(),
+        .state = 0,
     };
 }
