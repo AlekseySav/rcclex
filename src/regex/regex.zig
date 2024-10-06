@@ -1,11 +1,10 @@
 const std = @import("std");
-const common = @import("compile/common.zig");
 const gv = @import("gv.zig");
 
 const Self = @This();
 
 alloc: std.mem.Allocator,
-nodes: []const [common.MaxChar]usize,
+nodes: []const []const usize,
 final: []const bool,
 
 pub fn deinit(s: Self) void {
@@ -34,15 +33,15 @@ pub fn nodeIterator(nfa: Self) NodeIterator {
 }
 
 const EdgeIterator = struct {
-    s: []const [common.MaxChar]usize,
+    s: []const []const usize,
     i: usize,
 
     pub fn next(it: *EdgeIterator) ?gv.Edge {
-        if (it.i == it.s.len * common.MaxChar) {
+        if (it.i == it.s.len * it.s[0].len) {
             return null;
         }
-        const a = it.i / common.MaxChar;
-        const c = it.i % common.MaxChar;
+        const a = it.i / it.s[0].len;
+        const c = it.i % it.s[0].len;
         const b = it.s[a][c];
         it.i += 1;
         if (b >= it.s.len) {

@@ -1,8 +1,13 @@
 const std = @import("std");
-const ParseError = @import("common.zig").ParseError;
 const Charset = @import("charset.zig");
 
 const Self = @This();
+
+const LexerError = error{
+    BadChar,
+    UnexpectedEnd,
+    BadCharset,
+};
 
 const Token = struct {
     type: u8,
@@ -56,13 +61,13 @@ fn char(lex: *Self) u8 {
 
 fn onechar(lex: *Self, c: u8) !Charset {
     if (c == 0) {
-        return ParseError.UnexpectedEnd;
+        return LexerError.UnexpectedEnd;
     }
     if (c == '\\') {
         return lex.escchar();
     }
     if (!lex.charset.contains(c)) {
-        return ParseError.BadChar;
+        return LexerError.BadChar;
     }
     return Charset.char(c);
 }
@@ -84,7 +89,7 @@ fn chars(lex: *Self) !Charset {
             var it = endset.iterator();
             const e = it.next();
             if (p == 0 or e == null or p >= e.? or it.next() != null) {
-                return ParseError.BadCharset;
+                return LexerError.BadCharset;
             }
             s = s.add(Charset.range(p, e.?));
         } else {
@@ -109,7 +114,7 @@ const charW = Charset.range('a', 'z').add(Charset.range('A', 'Z'));
 fn escchar(lex: *Self) !Charset {
     const c = lex.char();
     if (c == 0) {
-        return ParseError.UnexpectedEnd;
+        return LexerError.UnexpectedEnd;
     }
     return switch (c) {
         'n' => charLF,

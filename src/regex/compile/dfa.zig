@@ -2,19 +2,20 @@ const std = @import("std");
 const Set = @import("zigset").Set;
 const NFA1 = @import("nfa-1.zig");
 const Charset = @import("charset.zig");
-const common = @import("common.zig");
 
 const Self = @This();
 
 alloc: std.mem.Allocator,
-nodes: std.ArrayList([common.MaxChar]usize),
+nodes: std.ArrayList([]usize),
 final: std.ArrayList(bool),
+maxChar: usize,
 
-pub fn init(a: std.mem.Allocator) Self {
+pub fn init(a: std.mem.Allocator, maxChar: usize) Self {
     return .{
         .alloc = a,
-        .nodes = std.ArrayList([common.MaxChar]usize).init(a),
+        .nodes = std.ArrayList([]usize).init(a),
         .final = std.ArrayList(bool).init(a),
+        .maxChar = maxChar,
     };
 }
 
@@ -39,7 +40,7 @@ pub fn build(s: *Self, nfa: NFA1) !void {
     try queue.push(try s.node(nfa, &output, beginState));
 
     while (queue.pop()) |a| {
-        for (0..common.MaxChar) |c| {
+        for (0..s.maxChar) |c| {
             const aState = output.items[a];
 
             var bState = Set(usize).init(s.alloc);
@@ -70,11 +71,9 @@ pub fn build(s: *Self, nfa: NFA1) !void {
 }
 
 pub fn complete(s: *Self, c: Charset) !void {
-    const r = s.nodes.items.len;
-    try s.nodes.append([_]usize{std.math.maxInt(usize)} ** common.MaxChar);
-    try s.final.append(false);
+    const r = try s.allocNode();
 
-    for (s.nodes.items) |*a| {
+    for (s.nodes.items) |a| {
         for (a, 0..) |*b, i| {
             if (c.contains(@intCast(i)) and b.* > r) {
                 b.* = r;
@@ -93,10 +92,7 @@ fn find(list: std.ArrayList(Set(usize)), v: Set(usize)) ?usize {
 }
 
 fn node(s: *Self, nfa: NFA1, output: *std.ArrayList(Set(usize)), state: Set(usize)) !usize {
-    const r = s.nodes.items.len;
-    try s.nodes.append([_]usize{std.math.maxInt(usize)} ** common.MaxChar);
-    try s.final.append(false);
-
+    const r = try s.allocNode();
     try output.append(state);
     var it = state.iterator();
     while (it.next()) |n| {
@@ -104,6 +100,18 @@ fn node(s: *Self, nfa: NFA1, output: *std.ArrayList(Set(usize)), state: Set(usiz
             s.final.items[n.*] = true;
         }
     }
+    return r;
+}
+
+fn allocNode(s: *Self) !usize {
+    const r = s.nodes.items.len;
+    try s.final.append(false);
+    const p = try s.alloc.alloc(usize, s.maxChar);
+    @memset(p, std.math.maxInt(usize));
+    s.nodes.append(p) catch |e| {
+        s.alloc.free(p);
+        return e;
+    };
     return r;
 }
 

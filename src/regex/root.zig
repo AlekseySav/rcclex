@@ -26,7 +26,7 @@ pub fn compile(alloc: std.mem.Allocator, c: Config) !Regex {
     defer nfa1.deinit();
     try nfa1.load(nfa);
     try nfa1.build();
-    var dfa = DFA.init(alloc);
+    var dfa = DFA.init(alloc, 128);
     defer dfa.deinit();
     try dfa.build(nfa1);
     try dfa.complete(c.charset);

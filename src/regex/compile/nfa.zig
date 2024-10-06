@@ -1,9 +1,13 @@
 const std = @import("std");
 const Charset = @import("charset.zig");
 const Lexer = @import("lexer.zig");
-const ParseError = @import("common.zig").ParseError;
 
 const Self = @This();
+
+const ParserError = error{
+    BadBraceBalance,
+    BadExpr,
+};
 
 const Slice = struct {
     begin: usize,
@@ -71,14 +75,14 @@ fn compile(nfa: *Self, lexer: *Lexer, level: u32) !Slice {
         }
     }
     if ((level == 0 and cbrace) or (level != 0 and !cbrace)) {
-        return ParseError.BadBraceBalance;
+        return ParserError.BadBraceBalance;
     }
     for (1..concats) |_| {
         const b = queue.pop();
         try queue.append(try nfa.concat(queue.pop(), b));
     }
     if (queue.items.len == 0) {
-        return ParseError.BadExpr;
+        return ParserError.BadExpr;
     }
     while (queue.items.len > 1) {
         const b = queue.pop();
