@@ -24,6 +24,20 @@ pub fn deinit(s: Self) void {
     s.final.deinit();
 }
 
+pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
+    if (n >= s.nodes.items.len) {
+        return null;
+    }
+    return .{ .begin = n == 0, .final = s.final.items[n] };
+}
+
+pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {
+    if (a >= s.nodes.items.len or b >= s.nodes.items.len or c >= s.maxChar) {
+        return false;
+    }
+    return s.nodes.items[a][c] == b;
+}
+
 pub fn build(s: *Self, nfa: NFA1) !void {
     var queue = Queue(usize).init(s.alloc);
     var output = std.ArrayList(Set(usize)).init(s.alloc);
@@ -97,7 +111,7 @@ fn node(s: *Self, nfa: NFA1, output: *std.ArrayList(Set(usize)), state: Set(usiz
     var it = state.iterator();
     while (it.next()) |n| {
         if (nfa.final.items[n.*] == true) {
-            s.final.items[n.*] = true;
+            s.final.items[r] = true;
         }
     }
     return r;

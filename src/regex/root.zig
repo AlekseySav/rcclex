@@ -30,6 +30,20 @@ pub const Regex = struct {
         s.state = s.nodes[s.state][c];
         return s.state != s.nodes.len - 1;
     }
+
+    pub fn getNode(s: Regex, n: usize) ?struct { begin: bool, final: bool } {
+        if (n >= s.nodes.len) {
+            return null;
+        }
+        return .{ .begin = n == 0, .final = s.final[n] };
+    }
+
+    pub fn containsEdge(s: Regex, a: usize, b: usize, c: u8) bool {
+        if (a >= s.nodes.len or b >= s.nodes.len or c >= s.maxch) {
+            return false;
+        }
+        return s.nodes[a][c] == b;
+    }
 };
 
 pub fn compile(alloc: std.mem.Allocator, c: Config) !Regex {

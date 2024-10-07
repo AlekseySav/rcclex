@@ -25,6 +25,20 @@ pub fn deinit(s: Self) void {
     s.nodes.deinit();
 }
 
+pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
+    if (n >= s.nodes.items.len) {
+        return null;
+    }
+    return .{ .begin = n == s.begin, .final = s.final.items[n] };
+}
+
+pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {
+    if (a >= s.nodes.items.len or b >= s.nodes.items.len) {
+        return false;
+    }
+    return s.nodes.items[a].items[b].contains(c);
+}
+
 pub fn load(s: *Self, nfa: NFA) !void {
     try s.final.appendNTimes(false, nfa.nodes);
     try s.nodes.appendNTimes(std.ArrayList(Charset).init(s.alloc), nfa.nodes);
