@@ -7,12 +7,14 @@ const Self = @This();
 alloc: std.mem.Allocator,
 nodes: std.ArrayList(std.ArrayList(Charset)),
 begin: usize,
+epsilon: u8,
 
-pub fn init(a: std.mem.Allocator) Self {
+pub fn init(a: std.mem.Allocator, eps: u8) Self {
     return .{
         .alloc = a,
         .nodes = std.ArrayList(std.ArrayList(Charset)).init(a),
         .begin = undefined,
+        .epsilon = eps,
     };
 }
 
@@ -57,8 +59,8 @@ pub fn build(nfa: *Self) !void {
     }
     for (nfa.nodes.items) |*i| {
         for (i.items) |*c| {
-            if (c.contains(0)) {
-                c.* = c.xor(Charset.char(0));
+            if (c.contains(nfa.epsilon)) {
+                c.* = c.xor(Charset.char(nfa.epsilon));
             }
         }
     }
@@ -82,7 +84,7 @@ pub fn build(nfa: *Self) !void {
 fn epsilonDfs(nfa: *Self, used: []bool, p: usize, n: usize) void {
     used[n] = true;
     for (nfa.nodes.items[n].items, 0..) |c, i| {
-        if (used[i] or !c.contains(0)) {
+        if (used[i] or !c.contains(nfa.epsilon)) {
             continue;
         }
         epsilonDfs(nfa, used, p, i);

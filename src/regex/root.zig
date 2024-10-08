@@ -6,8 +6,6 @@ pub const gv = @import("gv.zig");
 pub const Regex = struct {
     alloc: std.mem.Allocator,
     nodes: []const []const usize,
-    maxch: usize,
-    state: usize,
 
     pub fn deinit(s: Regex) void {
         for (s.nodes) |n| {
@@ -16,30 +14,22 @@ pub const Regex = struct {
         s.alloc.free(s.nodes);
     }
 
-    pub fn feed(s: *Regex, c: u8) bool {
-        if (c >= s.maxch) {
-            return false;
-        }
-        s.state = s.nodes[s.state][c];
-        return s.state != s.nodes.len - 1;
-    }
-
     pub fn getNode(s: Regex, n: usize) ?struct { begin: bool } {
-        if (n >= s.nodes.len) {
+        if (n >= s.nodes.len - 1) {
             return null;
         }
         return .{ .begin = n == 0 };
     }
 
     pub fn containsEdge(s: Regex, a: usize, b: usize, c: u8) bool {
-        if (a >= s.nodes.len or b >= s.nodes.len or c >= s.maxch) {
+        if (a >= s.nodes.len or b >= s.nodes.len or c >= s.nodes[a].len) {
             return false;
         }
         return s.nodes[a][c] == b;
     }
 };
 
-pub fn compile(alloc: std.mem.Allocator, charset: Charset, pattern: []const u8) !Regex {
+pub fn compile(alloc: std.mem.Allocator, charset: Charset, pattern: []const u8, eps: u8) !Regex {
     const Lexer = @import("compile/lexer.zig");
     const NFA = @import("compile/nfa.zig");
     const NFA1 = @import("compile/nfa1.zig");
@@ -50,10 +40,10 @@ pub fn compile(alloc: std.mem.Allocator, charset: Charset, pattern: []const u8) 
         .pattern = pattern,
         .i = 0,
     };
-    var nfa = NFA.init(alloc);
+    var nfa = NFA.init(alloc, eps);
     defer nfa.deinit();
     try nfa.build(&lex);
-    var nfa1 = NFA1.init(alloc);
+    var nfa1 = NFA1.init(alloc, eps);
     defer nfa1.deinit();
     try nfa1.load(nfa);
     try nfa1.build();
@@ -64,7 +54,5 @@ pub fn compile(alloc: std.mem.Allocator, charset: Charset, pattern: []const u8) 
     return .{
         .alloc = alloc,
         .nodes = try dfa.nodes.toOwnedSlice(),
-        .maxch = charset.maxChar(),
-        .state = 0,
     };
 }

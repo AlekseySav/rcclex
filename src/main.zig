@@ -3,19 +3,54 @@ const re = @import("regex");
 const ymlz = @import("ymlz");
 const Input = @import("input.zig");
 
+const RcclexError = error{
+    TooManyTokens,
+};
+
+pub fn makeExpr(in: Input, charset: *re.Charset, alloc: std.mem.Allocator) ![]const u8 {
+    var len = in.tokens.len * 4 - 1;
+    for (in.tokens) |t| {
+        len += t.re.len;
+    }
+    const r = try alloc.alloc(u8, len);
+
+    len = 0;
+    for (in.tokens) |t| {
+        if (len != 0) {
+            r[len] = '|';
+            len += 1;
+        }
+        r[len] = '(';
+        len += 1;
+        std.mem.copyForwards(u8, r[len..], t.re);
+        len += t.re.len;
+        r[len] = ')';
+        len += 1;
+        if (charset.new()) |c| {
+            r[len] = c;
+            len += 1;
+        } else {
+            return RcclexError.TooManyTokens;
+        }
+    }
+    return r;
+}
+
 pub fn main() !void {
     var y = try ymlz.Ymlz(Input).init(std.heap.page_allocator);
     const input = try y.loadFile("/home/schet/src/rcclex/examples/1.yaml");
     defer y.deinit(input);
 
     var charset = try input.charset();
-    charset = charset.add(re.Charset.range(1, 2));
-    const pattern = try input.joined(std.heap.page_allocator);
+    const eps = charset.new();
+    if (eps == null) {
+        return RcclexError.TooManyTokens;
+    }
+    const pattern = try makeExpr(input, &charset, std.heap.page_allocator);
+    defer std.heap.page_allocator.free(pattern);
 
-    const r = try re.compile(std.heap.page_allocator, charset, pattern);
+    const r = try re.compile(std.heap.page_allocator, charset, pattern, eps.?);
     defer r.deinit();
-
-    // match
 
     std.debug.print("read:\n", .{});
     for (0..r.nodes.len) |from| {
@@ -34,5 +69,5 @@ pub fn main() !void {
         std.debug.print("]\n", .{});
     }
 
-    try re.gv.print(r, std.io.getStdOut().writer());
+    // try re.gv.print(r, std.io.getStdOut().writer());
 }

@@ -24,13 +24,15 @@ alloc: std.mem.Allocator,
 edges: std.ArrayList(Edge),
 slice: Slice,
 nodes: usize,
+epsilon: u8,
 
-pub fn init(a: std.mem.Allocator) Self {
+pub fn init(a: std.mem.Allocator, eps: u8) Self {
     return .{
         .alloc = a,
         .edges = std.ArrayList(Edge).init(a),
         .slice = undefined,
         .nodes = 0,
+        .epsilon = eps,
     };
 }
 
@@ -66,8 +68,8 @@ fn compile(nfa: *Self, lexer: *Lexer, level: u32) !Slice {
     while (try lexer.token()) |t| {
         switch (t.type) {
             '*' => try queue.append(try nfa.star(queue.pop())),
-            '+' => try nfa.edge(queue.getLast().final, queue.getLast().begin, Charset.char(0)),
-            '?' => try nfa.edge(queue.getLast().begin, queue.getLast().final, Charset.char(0)),
+            '+' => try nfa.edge(queue.getLast().final, queue.getLast().begin, Charset.char(nfa.epsilon)),
+            '?' => try nfa.edge(queue.getLast().begin, queue.getLast().final, Charset.char(nfa.epsilon)),
             '|' => {
                 for (1..concats) |_| {
                     const b = queue.pop();
@@ -123,22 +125,22 @@ fn charset(nfa: *Self, c: Charset) !Slice {
 }
 
 fn concat(nfa: *Self, a: Slice, b: Slice) !Slice {
-    try nfa.edge(a.final, b.begin, Charset.char(0));
+    try nfa.edge(a.final, b.begin, Charset.char(nfa.epsilon));
     return .{ .begin = a.begin, .final = b.final };
 }
 
 fn merge(nfa: *Self, a: Slice, b: Slice) !Slice {
     const s = Slice{ .begin = nfa.node(), .final = nfa.node() };
-    try nfa.edge(s.begin, a.begin, Charset.char(0));
-    try nfa.edge(s.begin, b.begin, Charset.char(0));
-    try nfa.edge(a.final, s.final, Charset.char(0));
-    try nfa.edge(b.final, s.final, Charset.char(0));
+    try nfa.edge(s.begin, a.begin, Charset.char(nfa.epsilon));
+    try nfa.edge(s.begin, b.begin, Charset.char(nfa.epsilon));
+    try nfa.edge(a.final, s.final, Charset.char(nfa.epsilon));
+    try nfa.edge(b.final, s.final, Charset.char(nfa.epsilon));
     return s;
 }
 
 fn star(nfa: *Self, a: Slice) !Slice {
     const n = nfa.node();
-    try nfa.edge(n, a.begin, Charset.char(0));
-    try nfa.edge(a.final, n, Charset.char(0));
+    try nfa.edge(n, a.begin, Charset.char(nfa.epsilon));
+    try nfa.edge(a.final, n, Charset.char(nfa.epsilon));
     return .{ .begin = n, .final = n };
 }

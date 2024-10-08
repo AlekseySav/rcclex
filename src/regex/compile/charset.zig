@@ -42,6 +42,15 @@ pub fn empty(a: Self) bool {
     return a.m == 0;
 }
 
+pub fn new(a: *Self) ?u8 {
+    var it = a.inv().iterator();
+    if (it.next()) |c| {
+        a.* = a.add(char(c));
+        return c;
+    }
+    return null;
+}
+
 pub fn iterator(a: Self) It {
     return .{ .m = a.m, .c = 0, .done = false };
 }

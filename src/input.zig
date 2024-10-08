@@ -1,4 +1,3 @@
-const std = @import("std");
 const re = @import("regex");
 const Self = @This();
 
@@ -32,29 +31,6 @@ pub fn charset(s: Self) !re.Charset {
     return c;
 }
 
-pub fn joined(in: Self, alloc: std.mem.Allocator) ![]const u8 {
-    var len = in.tokens.len * 4 - 1;
-    for (in.tokens) |t| {
-        len += t.re.len;
-    }
-    const r = try alloc.alloc(u8, len);
-    len = 0;
-    for (in.tokens, 1..) |t, i| {
-        if (len != 0) {
-            r[len] = '|';
-            len += 1;
-        }
-        r[len] = '(';
-        len += 1;
-        std.mem.copyForwards(u8, r[len..], t.re);
-        len += t.re.len;
-        r[len] = ')';
-        len += 1;
-        r[len] = @intCast(i);
-        len += 1;
-    }
-    return r;
-}
 fn range(p: []const u8) !u8 {
     var r: u8 = 0;
     var esc = false;
