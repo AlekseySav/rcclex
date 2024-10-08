@@ -42,11 +42,11 @@ pub fn deinit(nfa: Self) void {
     nfa.edges.deinit();
 }
 
-pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
+pub fn getNode(s: Self, n: usize) ?struct { begin: bool } {
     if (n >= s.nodes) {
         return null;
     }
-    return .{ .begin = n == s.slice.begin, .final = n == s.slice.final };
+    return .{ .begin = n == s.slice.begin };
 }
 
 pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {

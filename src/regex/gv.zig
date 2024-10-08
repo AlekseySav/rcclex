@@ -1,7 +1,7 @@
 const std = @import("std");
 
 // print any struct, that implements
-// - fn getNode(self: Self, n: usize) ?struct { begin: bool, final: bool }
+// - fn getNode(self: Self, n: usize) ?struct { begin: bool }
 // - fn containsEdge(nfa: Self, a: usize, b: usize, c: u8) bool
 
 pub fn print(g: anytype, w: anytype) !void {
@@ -14,7 +14,7 @@ pub fn print(g: anytype, w: anytype) !void {
         if (n.begin) {
             try w.print("  0 -> {};\n", .{nodes});
         }
-        try w.print("  {} [shape={s}];\n", .{ nodes, if (n.final) "doublecircle" else "circle" });
+        try w.print("  {} [shape={s}];\n", .{ nodes, "circle" });
     }
     try w.print("\n", .{});
 

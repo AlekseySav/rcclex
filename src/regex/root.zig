@@ -6,7 +6,6 @@ pub const gv = @import("gv.zig");
 pub const Regex = struct {
     alloc: std.mem.Allocator,
     nodes: []const []const usize,
-    final: []const bool,
     maxch: usize,
     state: usize,
 
@@ -15,7 +14,6 @@ pub const Regex = struct {
             s.alloc.free(n);
         }
         s.alloc.free(s.nodes);
-        s.alloc.free(s.final);
     }
 
     pub fn feed(s: *Regex, c: u8) bool {
@@ -26,11 +24,11 @@ pub const Regex = struct {
         return s.state != s.nodes.len - 1;
     }
 
-    pub fn getNode(s: Regex, n: usize) ?struct { begin: bool, final: bool } {
+    pub fn getNode(s: Regex, n: usize) ?struct { begin: bool } {
         if (n >= s.nodes.len) {
             return null;
         }
-        return .{ .begin = n == 0, .final = s.final[n] };
+        return .{ .begin = n == 0 };
     }
 
     pub fn containsEdge(s: Regex, a: usize, b: usize, c: u8) bool {
@@ -66,7 +64,6 @@ pub fn compile(alloc: std.mem.Allocator, charset: Charset, pattern: []const u8) 
     return .{
         .alloc = alloc,
         .nodes = try dfa.nodes.toOwnedSlice(),
-        .final = try dfa.final.toOwnedSlice(),
         .maxch = charset.maxChar(),
         .state = 0,
     };
