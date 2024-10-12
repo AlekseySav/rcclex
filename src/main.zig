@@ -2,12 +2,13 @@ const std = @import("std");
 const re = @import("regex");
 const ymlz = @import("ymlz");
 const Input = @import("input.zig");
+const output = @import("output.zig");
 
 const RcclexError = error{
     TooManyTokens,
 };
 
-pub fn makeExpr(in: Input, charset: *re.Charset, alloc: std.mem.Allocator) ![]const u8 {
+fn makeExpr(in: Input, charset: *re.Charset, alloc: std.mem.Allocator) ![]const u8 {
     var len = in.tokens.len * 4 - 1;
     for (in.tokens) |t| {
         len += t.re.len;
@@ -37,37 +38,45 @@ pub fn makeExpr(in: Input, charset: *re.Charset, alloc: std.mem.Allocator) ![]co
 }
 
 pub fn main() !void {
+    const a = std.heap.page_allocator;
+
+    // load input
     var y = try ymlz.Ymlz(Input).init(std.heap.page_allocator);
     const input = try y.loadFile("/home/schet/src/rcclex/examples/1.yaml");
     defer y.deinit(input);
 
-    var charset = try input.charset();
+    // get chatset & regex
+    const originCharset = try input.charset();
+    var charset = originCharset;
     const eps = charset.new();
     if (eps == null) {
         return RcclexError.TooManyTokens;
     }
-    const pattern = try makeExpr(input, &charset, std.heap.page_allocator);
-    defer std.heap.page_allocator.free(pattern);
+    const pattern = try makeExpr(input, &charset, a);
+    defer a.free(pattern);
 
-    const r = try re.compile(std.heap.page_allocator, charset, pattern, eps.?);
+    // compile regex
+    const r = try re.compile(a, charset, pattern, eps.?);
     defer r.deinit();
 
-    std.debug.print("read:\n", .{});
-    for (0..r.nodes.len) |from| {
-        std.debug.print("  - [", .{});
-        for (input.config.output.minchar..input.config.output.maxchar + 1, 0..) |ch, i| {
-            const c: u8 = @intCast(ch);
-            if (i != 0) {
-                std.debug.print(", ", .{});
-            }
-            if (charset.contains(c)) {
-                std.debug.print("{}", .{r.nodes[from][c]});
-            } else {
-                std.debug.print("{}", .{r.nodes.len - 1});
-            }
-        }
-        std.debug.print("]\n", .{});
+    // output regex
+    const tokens = try a.alloc(output.Token, input.tokens.len);
+    defer a.free(tokens);
+    charset = originCharset;
+    _ = charset.new();
+    for (input.tokens, 0..) |t, i| {
+        tokens[i] = .{
+            .char = charset.new().?,
+            .id = t.id,
+        };
     }
+    const config = output.Config{
+        .minChar = input.config.output.minchar,
+        .maxChar = input.config.output.maxchar,
+        .charset = originCharset,
+        .tokens = tokens,
+    };
+    try output.printRegex(std.io.getStdOut().writer(), a, r, config);
 
     // try re.gv.print(r, std.io.getStdOut().writer());
 }

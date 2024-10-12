@@ -1,0 +1,14 @@
+config:
+  charset:
+    ranges:
+      - begin: 'a'
+        end: 'c'
+  output:
+    minchar: 97
+    maxchar: 99
+
+tokens:
+  - id: t1
+    re: 'a|b|c'
+  - id: t2
+    re: 'a*b+'
