@@ -59,7 +59,11 @@ const Printer = struct {
         var cit = p.config.charset.iterator();
         while (cit.next()) |c| {
             if (p.config.charset.contains(c)) {
-                try w.print("    {}: {}\n", .{ c, p.getNode(p.r.nodes[n][c]) });
+                if (p.r.hasChar(n, c)) {
+                    try w.print("    {}: {}\n", .{ c, p.getNode(p.r.nodes[n][c]) });
+                } else {
+                    try w.print("    {}: -1\n", .{c});
+                }
             }
         }
         cit = p.config.charset.iterator();
@@ -76,7 +80,9 @@ const Printer = struct {
         try p.dfs(w, 0);
         try w.print("\ntoken:\n", .{});
         for (p.nodes) |n| {
-            try w.print("  - '{s}'\n", .{if (n.token) |t| t else p.config.badToken});
+            if (n.node) |node| {
+                try w.print("  {}: '{s}'\n", .{ node, if (n.token) |t| t else p.config.badToken });
+            }
         }
     }
 };
