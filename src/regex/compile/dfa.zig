@@ -7,25 +7,28 @@ const Self = @This();
 
 alloc: std.mem.Allocator,
 nodes: std.ArrayList([]usize),
+final: std.ArrayList(bool),
 maxChar: usize,
 
 pub fn init(a: std.mem.Allocator, s: Charset) Self {
     return .{
         .alloc = a,
         .nodes = std.ArrayList([]usize).init(a),
+        .final = std.ArrayList(bool).init(a),
         .maxChar = s.maxChar(),
     };
 }
 
 pub fn deinit(s: Self) void {
     s.nodes.deinit();
+    s.final.deinit();
 }
 
-pub fn getNode(s: Self, n: usize) ?struct { begin: bool } {
+pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
     if (n >= s.nodes.items.len) {
         return null;
     }
-    return .{ .begin = n == 0 };
+    return .{ .begin = n == 0, .final = s.final.items[n] };
 }
 
 pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {
@@ -48,7 +51,7 @@ pub fn build(s: *Self, nfa: NFA1) !void {
 
     var beginState = Set(usize).init(s.alloc);
     _ = try beginState.add(nfa.begin);
-    try queue.push(try s.node(&output, beginState));
+    try queue.push(try s.node(nfa, &output, beginState));
 
     while (queue.pop()) |a| {
         for (0..s.maxChar) |c| {
@@ -74,7 +77,7 @@ pub fn build(s: *Self, nfa: NFA1) !void {
                 s.nodes.items[a][c] = n;
                 continue;
             }
-            const n = try s.node(&output, bState);
+            const n = try s.node(nfa, &output, bState);
             try queue.push(n);
             s.nodes.items[a][c] = n;
         }
@@ -102,14 +105,21 @@ fn find(list: std.ArrayList(Set(usize)), v: Set(usize)) ?usize {
     return null;
 }
 
-fn node(s: *Self, output: *std.ArrayList(Set(usize)), state: Set(usize)) !usize {
+fn node(s: *Self, nfa: NFA1, output: *std.ArrayList(Set(usize)), state: Set(usize)) !usize {
     const r = try s.allocNode();
     try output.append(state);
+    var it = state.iterator();
+    while (it.next()) |n| {
+        if (nfa.final.items[n.*] == true) {
+            s.final.items[r] = true;
+        }
+    }
     return r;
 }
 
 fn allocNode(s: *Self) !usize {
     const r = s.nodes.items.len;
+    try s.final.append(false);
     const p = try s.alloc.alloc(usize, s.maxChar);
     @memset(p, std.math.maxInt(usize));
     s.nodes.append(p) catch |e| {

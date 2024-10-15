@@ -6,6 +6,7 @@ const Self = @This();
 
 alloc: std.mem.Allocator,
 nodes: std.ArrayList(std.ArrayList(Charset)),
+final: std.ArrayList(bool),
 begin: usize,
 epsilon: u8,
 
@@ -13,6 +14,7 @@ pub fn init(a: std.mem.Allocator, eps: u8) Self {
     return .{
         .alloc = a,
         .nodes = std.ArrayList(std.ArrayList(Charset)).init(a),
+        .final = std.ArrayList(bool).init(a),
         .begin = undefined,
         .epsilon = eps,
     };
@@ -25,11 +27,11 @@ pub fn deinit(s: Self) void {
     s.nodes.deinit();
 }
 
-pub fn getNode(s: Self, n: usize) ?struct { begin: bool } {
+pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
     if (n >= s.nodes.items.len) {
         return null;
     }
-    return .{ .begin = n == s.begin };
+    return .{ .begin = n == s.begin, .final = s.final.items[n] };
 }
 
 pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {
@@ -40,6 +42,7 @@ pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {
 }
 
 pub fn load(s: *Self, nfa: NFA) !void {
+    try s.final.appendNTimes(false, nfa.nodes);
     try s.nodes.appendNTimes(std.ArrayList(Charset).init(s.alloc), nfa.nodes);
     for (s.nodes.items) |*i| {
         try i.appendNTimes(Charset.init(), nfa.nodes);
@@ -48,6 +51,7 @@ pub fn load(s: *Self, nfa: NFA) !void {
         s.nodes.items[e.a].items[e.b] = e.c;
     }
     s.begin = nfa.slice.begin;
+    s.final.items[nfa.slice.final] = true;
 }
 
 pub fn build(nfa: *Self) !void {
@@ -88,6 +92,9 @@ fn epsilonDfs(nfa: *Self, used: []bool, p: usize, n: usize) void {
             continue;
         }
         epsilonDfs(nfa, used, p, i);
+        if (nfa.final.items[i]) {
+            nfa.final.items[n] = true;
+        }
     }
     for (nfa.nodes.items[n].items, 0..) |c, i| {
         nfa.nodes.items[p].items[i] = nfa.nodes.items[p].items[i].add(c);
@@ -115,6 +122,7 @@ fn swap(comptime T: type) type {
 }
 
 fn swapNodes(nfa: *Self, a: usize, b: usize) void {
+    swap(bool).ptr(&nfa.final.items[a], &nfa.final.items[b]);
     if (nfa.begin == a) {
         nfa.begin = b;
     } else if (nfa.begin == b) {
