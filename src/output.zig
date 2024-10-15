@@ -40,7 +40,7 @@ const Printer = struct {
     fn tokens(p: *Printer) !void {
         for (0..p.nodes.len) |n| {
             for (p.config.tokens) |t| {
-                if (p.r.hasChar(n, t.char)) {
+                if (p.r.final[p.r.nodes[n][t.char]]) {
                     if (p.nodes[n].token != null) {
                         return OutputError.AmbiguousToken;
                     }
