@@ -71,8 +71,7 @@ pub fn main() !void {
         };
     }
     const config = output.Config{
-        .minChar = input.config.output.minchar,
-        .maxChar = input.config.output.maxchar,
+        .badToken = input.config.output.badtoken,
         .charset = originCharset,
         .tokens = tokens,
     };

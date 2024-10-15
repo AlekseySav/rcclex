@@ -14,6 +14,10 @@ pub const Regex = struct {
         s.alloc.free(s.nodes);
     }
 
+    pub fn hasChar(s: Regex, n: usize, c: usize) bool {
+        return s.nodes[n][c] < s.nodes.len - 1;
+    }
+
     pub fn getNode(s: Regex, n: usize) ?struct { begin: bool } {
         if (n >= s.nodes.len - 1) {
             return null;

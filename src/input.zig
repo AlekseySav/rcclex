@@ -13,8 +13,7 @@ config: struct {
         },
     },
     output: struct {
-        minchar: usize,
-        maxchar: usize,
+        badtoken: []const u8,
     },
 },
 
