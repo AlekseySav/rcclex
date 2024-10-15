@@ -1,0 +1,78 @@
+config:
+  charset:
+    ranges:
+      - begin: ' '
+        end: '~'
+      - begin: '\11'
+        end: '\12'
+  output:
+    format: yaml
+    badtoken: L_bad
+
+tokens:
+  - id: L_sym
+    re: '[A-Za-z\.@_][0-9A-Za-z\.@_]*'
+  - id: L_num
+    re: '[0-9]+|0[0-7]+|0[xX][0-9A-Fa-f]+'
+  - id: L_str
+    re: '"\.*"'
+  - id: L_semicolon
+    re: ';'
+  - id: L_comma
+    re: ','
+  - id: L_open_paren
+    re: '\('
+  - id: L_close_paren
+    re: '\)'
+  - id: L_open_bracket
+    re: '\['
+  - id: L_close_bracket
+    re: '\]'
+  - id: L_not
+    re: '!'
+  - id: L_inv
+    re: '~'
+  - id: L_mul
+    re: '\*'
+  - id: L_div
+    re: '/'
+  - id: L_mod
+    re: '%'
+  - id: L_add
+    re: '\+'
+  - id: L_sub
+    re: '-'
+  - id: L_shl
+    re: '<<'
+  - id: L_shr
+    re: '\76\76'
+  - id: L_lt
+    re: '<'
+  - id: L_leq
+    re: '<='
+  - id: L_gt
+    re: '\76'
+  - id: L_geq
+    re: '\76='
+  - id: L_equ
+    re: '=='
+  - id: L_neq
+    re: '!='
+  - id: L_and
+    re: '&'
+  - id: L_xor
+    re: '^'
+  - id: L_or
+    re: '\174'
+  - id: L_andl
+    re: '&&'
+  - id: L_orl
+    re: '\174\174'
+  - id: L_assign
+    re: '='
+  - id: L_space
+    re: '\40'
+  - id: L_tabspace
+    re: '\t'
+  - id: L_linebreak
+    re: '\n'
