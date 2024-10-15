@@ -20,7 +20,7 @@ pub fn print(g: anytype, w: anytype) !void {
 
     for (0..nodes) |a| {
         for (0..nodes) |b| {
-            for (0..128) |ch| {
+            for (0..256) |ch| {
                 const c: u8 = @intCast(ch);
                 if (g.containsEdge(a, b, c)) {
                     if (c >= ' ' and c < 127 and c != '"' and c != '\\') {
