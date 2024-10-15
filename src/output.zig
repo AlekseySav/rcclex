@@ -94,6 +94,7 @@ pub fn printRegex(w: anytype, a: std.mem.Allocator, r: re.Regex, config: Config)
         .nodes = try a.alloc(Node, r.nodes.len),
         .count = 0,
     };
+    defer a.free(p.nodes);
     @memset(p.nodes, .{ .used = false, .token = null, .node = null });
     return p.print(w);
 }

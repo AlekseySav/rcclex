@@ -25,6 +25,7 @@ pub fn deinit(s: Self) void {
         i.deinit();
     }
     s.nodes.deinit();
+    s.final.deinit();
 }
 
 pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
@@ -78,6 +79,9 @@ pub fn build(nfa: *Self) !void {
             nfa.swapNodes(last, nodes - n - 1);
             last -= 1;
         }
+    }
+    for (nfa.nodes.items[last + 1 ..]) |i| {
+        i.deinit();
     }
     nfa.nodes.shrinkAndFree(last + 1);
     for (nfa.nodes.items) |*i| {

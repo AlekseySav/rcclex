@@ -4,15 +4,25 @@ const ymlz = @import("ymlz");
 const Input = @import("input.zig");
 const output = @import("output.zig");
 
+const InternalError = error{
+    Leak,
+};
+
 pub fn main() !void {
-    const a = std.heap.page_allocator;
-    const w = std.io.getStdOut().writer();
+    var a = std.heap.GeneralPurposeAllocator(.{}){};
 
-    var y = try ymlz.Ymlz(Input).init(a);
-    const input = try y.loadFile("/home/schet/src/rcclex/examples/1.yaml");
-    defer y.deinit(input);
+    {
+        const w = std.io.getStdOut().writer();
+        var y = try ymlz.Ymlz(Input).init(a.allocator());
+        const input = try y.loadFile("/home/schet/src/rcclex/examples/1.yaml");
+        defer y.deinit(input);
 
-    return run(input, a, w);
+        try run(input, a.allocator(), w);
+    }
+
+    if (a.deinit() == .leak) {
+        return InternalError.Leak;
+    }
 }
 
 fn run(input: Input, a: std.mem.Allocator, w: anytype) !void {
@@ -24,14 +34,14 @@ fn run(input: Input, a: std.mem.Allocator, w: anytype) !void {
     const eps = try charset.new();
     const pattern = try makeExpr(input, &charset, a);
     defer a.free(pattern);
-    if (outputFormat == Input.OutputFormat.Regex) {
+    if (outputFormat == .Regex) {
         return printRegex(pattern, w);
     }
 
     // compile regex
     const r = try re.compile(a, charset, pattern, eps);
     defer r.deinit();
-    if (outputFormat == Input.OutputFormat.Graphviz) {
+    if (outputFormat == .Graphviz) {
         return re.gv.print(r, w);
     }
 
