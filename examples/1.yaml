@@ -4,6 +4,7 @@ config:
       - begin: 'a'
         end: 'c'
   output:
+    format: yaml
     badtoken: nil
 
 tokens:

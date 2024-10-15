@@ -7,14 +7,16 @@ const output = @import("output.zig");
 pub fn main() !void {
     const a = std.heap.page_allocator;
     const w = std.io.getStdOut().writer();
-    return run(a, w);
-}
 
-fn run(a: std.mem.Allocator, w: anytype) !void {
-    // load input
-    var y = try ymlz.Ymlz(Input).init(std.heap.page_allocator);
+    var y = try ymlz.Ymlz(Input).init(a);
     const input = try y.loadFile("/home/schet/src/rcclex/examples/1.yaml");
     defer y.deinit(input);
+
+    return run(input, a, w);
+}
+
+fn run(input: Input, a: std.mem.Allocator, w: anytype) !void {
+    const outputFormat = try input.outputFormat();
 
     // get chatset & regex
     const originCharset = try input.charset();
@@ -22,10 +24,16 @@ fn run(a: std.mem.Allocator, w: anytype) !void {
     const eps = try charset.new();
     const pattern = try makeExpr(input, &charset, a);
     defer a.free(pattern);
+    if (outputFormat == Input.OutputFormat.Regex) {
+        return printRegex(pattern, w);
+    }
 
     // compile regex
     const r = try re.compile(a, charset, pattern, eps);
     defer r.deinit();
+    if (outputFormat == Input.OutputFormat.Graphviz) {
+        return re.gv.print(r, w);
+    }
 
     // output regex
     const tokens = try a.alloc(output.Token, input.tokens.len);
@@ -44,8 +52,16 @@ fn run(a: std.mem.Allocator, w: anytype) !void {
         .tokens = tokens,
     };
     try output.printRegex(w, a, r, config);
+}
 
-    // try re.gv.print(r, w);
+fn printRegex(pattern: []const u8, w: anytype) !void {
+    for (pattern) |c| {
+        if (std.ascii.isPrint(c)) {
+            try w.print("{c}", .{c});
+        } else {
+            try w.print("\\{o}", .{c});
+        }
+    }
 }
 
 fn makeExpr(in: Input, charset: *re.Charset, alloc: std.mem.Allocator) ![]const u8 {

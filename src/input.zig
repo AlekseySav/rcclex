@@ -1,8 +1,16 @@
+const std = @import("std");
 const re = @import("regex");
 const Self = @This();
 
 const InputError = error{
     BadCharset,
+    BadOutputFormat,
+};
+
+pub const OutputFormat = enum {
+    Regex,
+    Graphviz,
+    Yaml,
 };
 
 config: struct {
@@ -13,6 +21,7 @@ config: struct {
         },
     },
     output: struct {
+        format: []const u8,
         badtoken: []const u8,
     },
 },
@@ -21,6 +30,20 @@ tokens: []const struct {
     id: []const u8,
     re: []const u8,
 },
+
+pub fn outputFormat(s: Self) !OutputFormat {
+    const fmt = s.config.output.format;
+    if (std.mem.eql(u8, fmt, "regex")) {
+        return OutputFormat.Regex;
+    }
+    if (std.mem.eql(u8, fmt, "graphviz")) {
+        return OutputFormat.Graphviz;
+    }
+    if (std.mem.eql(u8, fmt, "yaml")) {
+        return OutputFormat.Yaml;
+    }
+    return InputError.BadOutputFormat;
+}
 
 pub fn charset(s: Self) !re.Charset {
     var c = re.Charset.init();
