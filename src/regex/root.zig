@@ -21,14 +21,14 @@ pub const Regex = struct {
     }
 
     pub fn getNode(s: Regex, n: usize) ?struct { begin: bool, final: bool } {
-        if (n >= s.nodes.len) {
+        if (n >= s.nodes.len - 1) {
             return null;
         }
         return .{ .begin = n == 0, .final = s.final[n] };
     }
 
     pub fn containsEdge(s: Regex, a: usize, b: usize, c: u8) bool {
-        if (a >= s.nodes.len or b >= s.nodes.len or c >= s.nodes[a].len) {
+        if (a >= s.nodes.len - 1 or b >= s.nodes.len or c >= s.nodes[a].len) {
             return false;
         }
         return s.nodes[a][c] == b;
