@@ -41,7 +41,8 @@ const Printer = struct {
         for (0..p.nodes.len) |n| {
             for (p.config.tokens) |t| {
                 if (p.r.final[p.r.nodes[n][t.char]]) {
-                    if (p.nodes[n].token != null) {
+                    if (p.nodes[n].token != null and !std.mem.eql(u8, p.nodes[n].token.?, t.id)) {
+                        std.debug.print("{s} {s}", .{ p.nodes[n].token.?, t.id });
                         return OutputError.AmbiguousToken;
                     }
                     p.nodes[n].token = t.id;

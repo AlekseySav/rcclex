@@ -71,10 +71,7 @@ fn compile(nfa: *Self, lexer: *Lexer, level: u32) !Slice {
             '+' => try nfa.edge(queue.getLast().final, queue.getLast().begin, Charset.char(nfa.epsilon)),
             '?' => try nfa.edge(queue.getLast().begin, queue.getLast().final, Charset.char(nfa.epsilon)),
             '|' => {
-                for (1..concats) |_| {
-                    const b = queue.pop();
-                    try queue.append(try nfa.concat(queue.pop(), b));
-                }
+                try nfa.applyConcats(concats, &queue);
                 concats = 0;
             },
             '.' => {
@@ -95,10 +92,7 @@ fn compile(nfa: *Self, lexer: *Lexer, level: u32) !Slice {
     if ((level == 0 and cbrace) or (level != 0 and !cbrace)) {
         return ParserError.BadBraceBalance;
     }
-    for (1..concats) |_| {
-        const b = queue.pop();
-        try queue.append(try nfa.concat(queue.pop(), b));
-    }
+    try nfa.applyConcats(concats, &queue);
     if (queue.items.len == 0) {
         return ParserError.BadExpr;
     }
@@ -143,4 +137,14 @@ fn star(nfa: *Self, a: Slice) !Slice {
     try nfa.edge(n, a.begin, Charset.char(nfa.epsilon));
     try nfa.edge(a.final, n, Charset.char(nfa.epsilon));
     return .{ .begin = n, .final = n };
+}
+
+fn applyConcats(nfa: *Self, concats: usize, queue: *std.ArrayList(Slice)) !void {
+    if (concats == 0) {
+        return;
+    }
+    for (1..concats) |_| {
+        const b = queue.pop();
+        try queue.append(try nfa.concat(queue.pop(), b));
+    }
 }
