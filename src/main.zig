@@ -12,12 +12,14 @@ pub fn main() !void {
     var a = std.heap.GeneralPurposeAllocator(.{}){};
 
     {
-        const w = std.io.getStdOut().writer();
+        var r = std.io.bufferedReader(std.io.getStdIn().reader());
         var y = try ymlz.Ymlz(Input).init(a.allocator());
-        const input = try y.loadFile("/home/schet/src/rcclex/examples/1.yaml");
+        const input = try y.loadReader(r.reader().any());
         defer y.deinit(input);
 
-        try run(input, a.allocator(), w);
+        var w = std.io.bufferedWriter(std.io.getStdOut().writer());
+        try run(input, a.allocator(), w.writer());
+        try w.flush();
     }
 
     if (a.deinit() == .leak) {
