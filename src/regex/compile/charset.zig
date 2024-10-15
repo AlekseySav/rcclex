@@ -1,5 +1,9 @@
 const Self = @This();
 
+const CharsetError = error{
+    CharsetOverflow,
+};
+
 m: u256,
 
 pub fn init() Self {
@@ -42,13 +46,13 @@ pub fn empty(a: Self) bool {
     return a.m == 0;
 }
 
-pub fn new(a: *Self) ?u8 {
+pub fn new(a: *Self) !u8 {
     var it = a.inv().iterator();
     if (it.next()) |c| {
         a.* = a.add(char(c));
         return c;
     }
-    return null;
+    return CharsetError.CharsetOverflow;
 }
 
 pub fn iterator(a: Self) It {
