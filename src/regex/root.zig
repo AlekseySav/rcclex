@@ -39,6 +39,7 @@ pub const Regex = struct {
 };
 
 pub fn print(re: Regex, w: anytype) !void {
+    try Automation(Regex).init(re.alloc).traverse("");
     return Automation(Regex).init(re.alloc, re).graphviz(w);
 }
 

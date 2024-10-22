@@ -1,4 +1,5 @@
 const std = @import("std");
+const Set = @import("zigset").Set;
 
 /// Common interface for NFA, DFA
 /// used for testing, printing
@@ -20,6 +21,13 @@ pub fn Automation(A: type) type {
         pub fn graphviz(a: Self, w: anytype) !void {
             var gv = Graphviz(A, @TypeOf(w)).init(a.allocator, w);
             try gv.print(a.a);
+        }
+
+        pub fn traverse(a: Self, s: []const u8) !void {
+            const table = Table(A).init(a.allocator);
+            defer table.deinit();
+            try table.load(a.a);
+            _ = s;
         }
     };
 }
@@ -77,6 +85,35 @@ fn Graphviz(A: type, W: type) type {
             gv.w.print(fmt, args) catch |e| {
                 gv.err = e;
             };
+        }
+    };
+}
+
+fn Table(A: type) type {
+    return struct {
+        const Self = @This();
+        const Node = std.AutoHashMap(u8, Set(usize));
+
+        alloc: std.mem.Allocator,
+        nodes: std.ArrayList(Node),
+
+        fn init(a: std.mem.Allocator) Self {
+            return .{ .alloc = a, .nodes = std.ArrayList(Node).init(a) };
+        }
+
+        fn deinit(s: *Self) void {
+            for (s.nodes) |*node| {
+                for (node.items) |*set| {
+                    set.deinit();
+                }
+                node.deinit();
+            }
+            s.nodes.deinit();
+        }
+
+        fn load(s: *Self, a: A) !void {
+            _ = s;
+            _ = a;
         }
     };
 }
