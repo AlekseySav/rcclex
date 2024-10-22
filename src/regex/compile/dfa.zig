@@ -1,9 +1,10 @@
+const Self = @This();
+
 const std = @import("std");
 const Set = @import("zigset").Set;
 const NFA1 = @import("nfa1.zig");
 const Charset = @import("charset.zig");
-
-const Self = @This();
+const Automation = @import("automation.zig").Automation(Self);
 
 alloc: std.mem.Allocator,
 nodes: std.ArrayList([]usize),
@@ -24,18 +25,21 @@ pub fn deinit(s: Self) void {
     s.final.deinit();
 }
 
-pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
-    if (n >= s.nodes.items.len) {
-        return null;
-    }
-    return .{ .begin = n == 0, .final = s.final.items[n] };
+pub fn size(s: Self) usize {
+    return s.nodes.items.len;
 }
 
-pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {
-    if (a >= s.nodes.items.len or b >= s.nodes.items.len or c >= s.maxChar) {
-        return false;
+pub fn edges(s: Self, n: ?usize, used: []bool, cb: Automation.Callback) void {
+    const a: usize = if (n) |nd| nd else 0;
+    used[a] = true;
+    for (s.nodes.items[a], 0..) |b, c| {
+        if (s.containsEdge(a, b, @intCast(c))) {
+            cb.run(cb, a, b, @intCast(c));
+            if (!used[b]) {
+                s.edges(b, used, cb);
+            }
+        }
     }
-    return s.nodes.items[a][c] == b;
 }
 
 pub fn build(s: *Self, nfa: NFA1) !void {

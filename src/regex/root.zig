@@ -1,7 +1,7 @@
 const std = @import("std");
 
 pub const Charset = @import("compile/charset.zig");
-pub const gv = @import("gv.zig");
+const Automation = @import("compile/automation.zig").Automation;
 
 pub const Regex = struct {
     alloc: std.mem.Allocator,
@@ -33,7 +33,28 @@ pub const Regex = struct {
         }
         return s.nodes[a][c] == b;
     }
+
+    pub fn size(s: Regex) usize {
+        return s.nodes.len;
+    }
+
+    pub fn edges(s: Regex, n: ?usize, used: []bool, cb: Automation(Regex).Callback) void {
+        const a: usize = if (n) |nd| nd else 0;
+        used[a] = true;
+        for (s.nodes[a], 0..) |b, c| {
+            if (b < s.nodes.len - 1) {
+                cb.run(cb, a, b, @intCast(c));
+                if (!used[b]) {
+                    s.edges(b, used, cb);
+                }
+            }
+        }
+    }
 };
+
+pub fn print(re: Regex, w: anytype) !void {
+    return Automation(Regex).init(re.alloc, re).graphviz(w);
+}
 
 pub fn compile(alloc: std.mem.Allocator, charset: Charset, pattern: []const u8, eps: u8) !Regex {
     const Lexer = @import("compile/lexer.zig");

@@ -44,7 +44,7 @@ fn run(input: Input, a: std.mem.Allocator, w: anytype) !void {
     const r = try re.compile(a, charset, pattern, eps);
     defer r.deinit();
     if (outputFormat == .Graphviz) {
-        return re.gv.print(r, w);
+        return re.print(r, w);
     }
 
     // output regex

@@ -44,22 +44,6 @@ pub fn deinit(nfa: Self) void {
     nfa.edges.deinit();
 }
 
-pub fn getNode(s: Self, n: usize) ?struct { begin: bool, final: bool } {
-    if (n >= s.nodes) {
-        return null;
-    }
-    return .{ .begin = n == s.slice.begin, .final = n == s.slice.final };
-}
-
-pub fn containsEdge(s: Self, a: usize, b: usize, c: u8) bool {
-    for (s.edges.items) |e| {
-        if (e.a == a and e.b == b and e.c.contains(c)) {
-            return true;
-        }
-    }
-    return false;
-}
-
 fn compile(nfa: *Self, lexer: *Lexer, level: u32) !Slice {
     var queue = std.ArrayList(Slice).init(nfa.alloc);
     defer queue.deinit();
