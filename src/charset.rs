@@ -6,6 +6,7 @@ use std::ops::{BitAnd, BitOr};
  */
 
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[repr(packed(8))]
 pub struct Charset {
     map: u128,
     cmd: u8,
