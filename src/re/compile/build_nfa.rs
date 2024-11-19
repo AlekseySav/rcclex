@@ -42,14 +42,14 @@ impl Automation for NFA {
 }
 
 impl NFA {
-    pub fn build(lex: &mut Lexer, epsilon: u8) -> LexerResult<NFA> {
+    pub fn build(mut lex: Lexer, epsilon: u8) -> LexerResult<NFA> {
         let mut nfa = NFA {
             edges: Vec::new(),
             begin: 0,
             nodes: 0,
             epsilon,
         };
-        nfa.begin = nfa.compile(lex, 0)?.begin;
+        nfa.begin = nfa.compile(&mut lex, 0)?.begin;
         Ok(nfa)
     }
 
@@ -165,12 +165,12 @@ mod nfa {
     fn jist_works() {
         // tests are small as nfa traversing is very slow
         let set = Charset::range(b'a', b'z');
-        let mut n1 = Lexer {
+        let n1 = Lexer {
             iter: b"(ab|(a)c*)z".iter(),
             charset: set,
             peekc: 0,
         };
-        let nfa = NFA::build(&mut n1, 0).unwrap();
+        let nfa = NFA::build(n1, 0).unwrap();
         assert_ne!(nfa.traverse(nfa.begin, b"az"), None);
         assert_ne!(nfa.traverse(nfa.begin, b"abz"), None);
         assert_ne!(nfa.traverse(nfa.begin, b"acz"), None);

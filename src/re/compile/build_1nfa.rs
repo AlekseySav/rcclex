@@ -25,7 +25,7 @@ impl Automation for NFA1 {
 }
 
 impl NFA1 {
-    pub fn build(nfa: &mut NFA) -> NFA1 {
+    pub fn build(nfa: NFA) -> NFA1 {
         let mut nfa1 = NFA1 {
             nodes: vec![vec![Charset::new(); nfa.nodes]; nfa.nodes],
             begin: nfa.begin,
