@@ -1,10 +1,10 @@
 use std::fmt;
 
-include!("charset.rs");
-include!("automation.rs");
-include!("compile/lexer.rs");
-include!("compile/build_nfa.rs");
-include!("compile/build_1nfa.rs");
+include!("re/charset.rs");
+include!("re/automation.rs");
+include!("re/compile/lexer.rs");
+include!("re/compile/build_nfa.rs");
+include!("re/compile/build_1nfa.rs");
 
 fn main() {
     let s = b"(he|llo)#";
