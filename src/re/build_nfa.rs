@@ -1,5 +1,3 @@
-use std::collections::VecDeque;
-
 /*
  * read lexer and build NFA
  * https://en.wikipedia.org/wiki/Nondeterministic_finite_automaton
@@ -29,7 +27,6 @@ impl Automation for NFA {
         return AutomationInfo {
             nodes: self.nodes,
             begin: self.begin,
-            epsilon: Some(self.epsilon),
         };
     }
 
@@ -42,7 +39,7 @@ impl Automation for NFA {
 }
 
 impl NFA {
-    pub fn build(mut lex: Lexer, epsilon: u8) -> LexerResult<NFA> {
+    pub fn build(mut lex: Lexer, epsilon: u8) -> RegexResult<NFA> {
         let mut nfa = NFA {
             edges: Vec::new(),
             begin: 0,
@@ -69,11 +66,11 @@ impl NFA {
         return Slice { begin, end };
     }
 
-    fn concat(&mut self, q: &mut VecDeque<Slice>, concats: usize) -> LexerResult<()> {
+    fn concat(&mut self, q: &mut Vec<Slice>, concats: usize) -> RegexResult<()> {
         for _ in 1..concats {
             let (a, b) = NFA::pop2(q)?;
             self.put_edge(a.end, b.begin, Charset::char(self.epsilon));
-            q.push_back(Slice {
+            q.push(Slice {
                 begin: a.begin,
                 end: b.end,
             });
@@ -81,43 +78,47 @@ impl NFA {
         Ok(())
     }
 
-    fn compile(&mut self, lex: &mut Lexer, depth: u32) -> LexerResult<Slice> {
-        let mut queue: VecDeque<Slice> = VecDeque::new();
+    fn compile(&mut self, lex: &mut Lexer, depth: u32) -> RegexResult<Slice> {
+        let mut queue: Vec<Slice> = Vec::new();
         let mut concats = 0usize;
 
         loop {
             match lex.token()? {
                 None => {
                     if depth != 0 {
-                        return Err(LexerError::BadExpr);
+                        return Err(RegexError::BadExpr);
                     }
                     break;
                 }
                 Some(Token::Op(b')')) => {
                     if depth == 0 {
-                        return Err(LexerError::BadExpr);
+                        return Err(RegexError::BadExpr);
                     }
                     break;
                 }
                 Some(Token::Op(b'(')) => {
                     concats += 1;
-                    queue.push_back(self.compile(lex, depth + 1)?);
+                    queue.push(self.compile(lex, depth + 1)?);
                 }
                 Some(Token::Char(c)) => {
                     concats += 1;
-                    queue.push_back(self.charset(c));
+                    queue.push(self.charset(c));
+                }
+                Some(Token::Op(b'?')) => {
+                    let a = &queue[queue.len() - 1];
+                    self.put_edge(a.begin, a.end, Charset::char(self.epsilon));
                 }
                 Some(Token::Op(b'*')) => {
                     let a = NFA::pop1(&mut queue)?;
                     let n = self.make_node();
                     self.put_edge(n, a.begin, Charset::char(self.epsilon));
                     self.put_edge(a.end, n, Charset::char(self.epsilon));
-                    queue.push_back(Slice { begin: n, end: n });
+                    queue.push(Slice { begin: n, end: n });
                 }
                 Some(Token::Op(b'+')) => {
                     let n = NFA::pop1(&mut queue)?;
                     self.put_edge(n.end, n.begin, Charset::char(self.epsilon));
-                    queue.push_back(n);
+                    queue.push(n);
                 }
                 Some(Token::Op(b'|')) => {
                     self.concat(&mut queue, concats)?;
@@ -138,21 +139,21 @@ impl NFA {
             self.put_edge(s.begin, b.begin, Charset::char(self.epsilon));
             self.put_edge(a.end, s.end, Charset::char(self.epsilon));
             self.put_edge(b.end, s.end, Charset::char(self.epsilon));
-            queue.push_back(s);
+            queue.push(s);
         }
-        match queue.pop_back() {
-            None => Err(LexerError::BadExpr),
+        match queue.pop() {
+            None => Err(RegexError::BadExpr),
             Some(s) => Ok(s),
         }
     }
 
-    fn pop1(q: &mut VecDeque<Slice>) -> LexerResult<Slice> {
-        return q.pop_back().ok_or(LexerError::BadExpr);
+    fn pop1(q: &mut Vec<Slice>) -> RegexResult<Slice> {
+        return q.pop().ok_or(RegexError::BadExpr);
     }
 
-    fn pop2(q: &mut VecDeque<Slice>) -> LexerResult<(Slice, Slice)> {
-        let b = q.pop_back().ok_or(LexerError::BadExpr)?;
-        let a = q.pop_back().ok_or(LexerError::BadExpr)?;
+    fn pop2(q: &mut Vec<Slice>) -> RegexResult<(Slice, Slice)> {
+        let b = q.pop().ok_or(RegexError::BadExpr)?;
+        let a = q.pop().ok_or(RegexError::BadExpr)?;
         return Ok((a, b));
     }
 }

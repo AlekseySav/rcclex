@@ -1,16 +1,18 @@
+include!("errors.rs");
 include!("charset.rs");
 include!("lexer.rs");
 include!("build_nfa.rs");
 include!("build_1nfa.rs");
 include!("build_dfa.rs");
+include!("build_cdfa.rs");
 
-pub fn compile(charset: Charset, s: &[u8]) -> LexerResult<DFA> {
+pub fn compile(charset: Charset, s: &[u8]) -> RegexResult<CDFA> {
     let lex = Lexer {
         iter: s.iter(),
         charset,
         peekc: 0,
     };
-    Ok(DFA::build(NFA1::build(NFA::build(lex, 0)?)))
+    Ok(CDFA::build(DFA::build(NFA1::build(NFA::build(lex, 0)?))))
 }
 
 #[cfg(test)]
@@ -27,7 +29,7 @@ mod regex {
             };
             buf.push(*c);
         }
-        return dfa.nodes[state].get(&127u8) != None;
+        return dfa.nodes[state].get(&127) != None;
     }
 
     fn run<'a>(re: &[u8], s: &[u8], buf: &'a mut Vec<u8>) -> ReMatchResult<'a> {
@@ -52,7 +54,7 @@ mod regex {
     fn perl_test() {
         for ts in RE_TEST_SUITES {
             println!(
-                "{} {}",
+                "'{}' '{}'",
                 String::from_utf8_lossy(ts.re),
                 String::from_utf8_lossy(ts.s)
             );

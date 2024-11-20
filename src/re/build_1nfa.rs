@@ -15,7 +15,6 @@ impl Automation for NFA1 {
         return AutomationInfo {
             nodes: self.nodes.len(),
             begin: self.begin,
-            epsilon: None,
         };
     }
 

@@ -5,6 +5,7 @@
  * Convert 1-NFA to DFA
  */
 
+use std::collections::VecDeque;
 use std::collections::{HashMap, HashSet};
 
 pub struct DFA {
@@ -16,7 +17,6 @@ impl Automation for DFA {
         return AutomationInfo {
             nodes: self.nodes.len(),
             begin: 0,
-            epsilon: None,
         };
     }
 

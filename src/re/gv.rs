@@ -6,7 +6,6 @@
 pub struct AutomationInfo {
     nodes: usize,
     begin: usize,
-    epsilon: Option<u8>,
 }
 
 pub trait Automation {

@@ -1,11 +1,13 @@
-use std::fmt;
+use std::{env, fmt};
 
 include!("re/gv.rs");
 include!("re/compile.rs");
+include!("match.rs");
 
 fn main() {
+    // let args: Vec<String> = env::args().collect();
     let s = b"(he|llo|h)#";
     let charset = Charset::range(b'#', b'{');
-    let dfa = compile(charset, s).unwrap();
-    println!("{}", Graphviz(dfa));
+    let cdfa = compile(charset, s).unwrap();
+    println!("{}", Graphviz(cdfa));
 }

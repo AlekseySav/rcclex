@@ -37,7 +37,7 @@ impl Charset {
         return s;
     }
 
-    pub fn parse(s: &[u8]) -> LexerResult<Charset> {
+    pub fn parse(s: &[u8]) -> RegexResult<Charset> {
         let mut res = Charset::new();
         let mut lex = Lexer {
             iter: s.iter(),
@@ -53,7 +53,7 @@ impl Charset {
                     res = res | c;
                 }
                 _ => {
-                    return Err(LexerError::BadCharset);
+                    return Err(RegexError::BadCharset);
                 }
             }
         }

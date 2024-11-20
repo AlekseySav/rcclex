@@ -4,16 +4,6 @@
  * - lexer.token()
  */
 
-pub type LexerResult<T> = std::result::Result<T, LexerError>;
-
-#[derive(Debug, Clone, PartialEq)]
-pub enum LexerError {
-    BadChar(u8),
-    BadEof,
-    BadCharset,
-    BadExpr,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Token {
     Op(u8),
@@ -26,7 +16,7 @@ pub struct Lexer<'a> {
     peekc: u8,
 }
 
-impl fmt::Display for LexerError {
+impl fmt::Display for RegexError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             Self::BadChar(c) => write!(f, "character not in charset: '{}'", Charset::char(*c)),
@@ -38,11 +28,11 @@ impl fmt::Display for LexerError {
 }
 
 impl Lexer<'_> {
-    pub fn token(&mut self) -> LexerResult<Option<Token>> {
+    pub fn token(&mut self) -> RegexResult<Option<Token>> {
         let c = self.char();
         match c {
             0 => Ok(None),
-            b'(' | b')' | b'*' | b'+' | b'|' => Ok(Some(Token::Op(c))),
+            b'(' | b')' | b'*' | b'+' | b'|' | b'?' => Ok(Some(Token::Op(c))),
             b'.' => Ok(Some(Token::Char(self.charset))),
             b'[' => {
                 let s = self.getcharset()?;
@@ -65,23 +55,23 @@ impl Lexer<'_> {
         return *self.iter.next().or(Some(&0)).unwrap();
     }
 
-    fn char_token(&self, set: Charset) -> LexerResult<Token> {
+    fn char_token(&self, set: Charset) -> RegexResult<Token> {
         let bad = set & self.charset.invert();
         if !bad.empty() {
-            return Err(LexerError::BadChar(bad.chars().next().unwrap()));
+            return Err(RegexError::BadChar(bad.chars().next().unwrap()));
         }
         return Ok(Token::Char(set));
     }
 
-    fn getchar(&mut self) -> LexerResult<Charset> {
+    fn getchar(&mut self) -> RegexResult<Charset> {
         match self.char() {
-            0 => Err(LexerError::BadEof),
+            0 => Err(RegexError::BadEof),
             b'\\' => self.escaped(),
             c => Ok(Charset::char(c)),
         }
     }
 
-    fn getcharset(&mut self) -> LexerResult<Charset> {
+    fn getcharset(&mut self) -> RegexResult<Charset> {
         let invert = match self.char() {
             b'^' => true,
             c => {
@@ -95,7 +85,7 @@ impl Lexer<'_> {
         loop {
             match self.char() {
                 0 => {
-                    return Err(LexerError::BadEof);
+                    return Err(RegexError::BadEof);
                 }
                 b']' => {
                     break;
@@ -103,7 +93,7 @@ impl Lexer<'_> {
                 b'-' => {
                     let c = self.getchar()?;
                     if !prev.ischar() || !c.ischar() {
-                        return Err(LexerError::BadCharset);
+                        return Err(RegexError::BadCharset);
                     }
                     let a = prev.chars().next().unwrap();
                     let b = c.chars().next().unwrap();
@@ -124,12 +114,13 @@ impl Lexer<'_> {
         return Ok(set);
     }
 
-    fn escaped(&mut self) -> LexerResult<Charset> {
+    fn escaped(&mut self) -> RegexResult<Charset> {
         let mut c = self.char();
         let mut a = 0u8;
         return match c {
-            0 => Err(LexerError::BadEof),
+            0 => Err(RegexError::BadEof),
             b'n' => Ok(Charset::char(b'\n')),
+            b'N' => Ok(Charset::char(b'\n').invert()),
             b't' => Ok(Charset::char(b'\t')),
             b'r' => Ok(Charset::char(b'\r')),
             b'q' => Ok(Charset::char(b'\'')),
@@ -162,7 +153,7 @@ mod lexer {
         return Token::Char(r);
     }
 
-    fn onetok(charset: Charset, s: &[u8]) -> LexerResult<Option<Token>> {
+    fn onetok(charset: Charset, s: &[u8]) -> RegexResult<Option<Token>> {
         let mut lex = Lexer {
             iter: s.iter(),
             charset,
@@ -221,13 +212,13 @@ mod lexer {
     #[test]
     fn errors() {
         let s = Charset::range(b'a', b'z');
-        assert_eq!(onetok(s, b"\\").unwrap_err(), LexerError::BadEof);
-        assert_eq!(onetok(s, b"[").unwrap_err(), LexerError::BadEof);
-        assert_eq!(onetok(s, b"[hello").unwrap_err(), LexerError::BadEof);
-        assert_eq!(onetok(s, b"[i-").unwrap_err(), LexerError::BadEof);
-        assert_eq!(onetok(s, b"\\|").unwrap_err(), LexerError::BadChar(b'|'));
-        assert_eq!(onetok(s, b"[\\d-i]").unwrap_err(), LexerError::BadCharset);
-        assert_eq!(onetok(s, b"[i-\\d]").unwrap_err(), LexerError::BadCharset);
-        assert_eq!(onetok(s, b"\\0").unwrap_err(), LexerError::BadChar(0));
+        assert_eq!(onetok(s, b"\\").unwrap_err(), RegexError::BadEof);
+        assert_eq!(onetok(s, b"[").unwrap_err(), RegexError::BadEof);
+        assert_eq!(onetok(s, b"[hello").unwrap_err(), RegexError::BadEof);
+        assert_eq!(onetok(s, b"[i-").unwrap_err(), RegexError::BadEof);
+        assert_eq!(onetok(s, b"\\|").unwrap_err(), RegexError::BadChar(b'|'));
+        assert_eq!(onetok(s, b"[\\d-i]").unwrap_err(), RegexError::BadCharset);
+        assert_eq!(onetok(s, b"[i-\\d]").unwrap_err(), RegexError::BadCharset);
+        assert_eq!(onetok(s, b"\\0").unwrap_err(), RegexError::BadChar(0));
     }
 }
