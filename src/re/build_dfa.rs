@@ -48,7 +48,7 @@ impl DFA {
         while queue.len() != 0 {
             let id_from = queue.pop_front().unwrap();
 
-            for c in 0..128 {
+            for c in 0..=255 {
                 let from_set = &output[id_from];
                 let mut to: HashSet<usize> = HashSet::new();
                 for from in from_set {
