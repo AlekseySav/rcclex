@@ -1,3 +1,4 @@
+use ethnum::U256;
 use std::ops::{BitAnd, BitOr};
 
 /*
@@ -6,10 +7,8 @@ use std::ops::{BitAnd, BitOr};
  */
 
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[repr(packed(8))]
 pub struct Charset {
-    map: u128,
-    cmd: u8,
+    map: ethnum::U256,
 }
 
 pub struct CharsetIter {
@@ -19,20 +18,19 @@ pub struct CharsetIter {
 
 impl Charset {
     pub fn new() -> Charset {
-        return Charset { map: 0, cmd: 0 };
+        return Charset { map: U256::ZERO };
     }
 
     pub fn char(c: u8) -> Charset {
         return Charset {
-            map: 1u128 << c,
-            cmd: 0,
+            map: U256::ONE << c,
         };
     }
 
     pub fn range(a: u8, b: u8) -> Charset {
-        let mut s = Charset { map: 0u128, cmd: 0 };
+        let mut s = Charset { map: U256::ZERO };
         for c in a..=b {
-            s.map |= 1u128 << c;
+            s.map = s.map | U256::new(1) << c;
         }
         return s;
     }
@@ -61,20 +59,16 @@ impl Charset {
 
     pub fn invert(self) -> Charset {
         return Charset {
-            map: self.map ^ std::u128::MAX,
-            cmd: self.cmd,
+            map: self.map ^ U256::MAX,
         };
     }
 
     pub fn contains(self, c: u8) -> bool {
-        if c < 128 {
-            return (self.map & (1u128 << c)) != 0;
-        }
-        return c - 128 < self.cmd;
+        return (self.map & (U256::ONE << c)) != 0;
     }
 
     pub fn empty(self) -> bool {
-        return self.map == 0 && self.cmd == 0;
+        return self.map == U256::ZERO;
     }
 
     pub fn ischar(self) -> bool {
@@ -85,10 +79,8 @@ impl Charset {
         return it.next() == None;
     }
 
-    pub fn addcmd(&mut self) -> u8 {
-        assert!(self.cmd < 127);
-        self.cmd += 1;
-        return self.cmd + 127;
+    pub fn iscmd(c: u8) -> bool {
+        return c > 127;
     }
 
     pub fn chars(self) -> CharsetIter {
@@ -101,7 +93,6 @@ impl BitOr for Charset {
     fn bitor(self, rhs: Charset) -> Self::Output {
         return Charset {
             map: self.map | rhs.map,
-            cmd: self.cmd,
         };
     }
 }
@@ -111,7 +102,6 @@ impl BitAnd for Charset {
     fn bitand(self, rhs: Charset) -> Self::Output {
         return Charset {
             map: self.map & rhs.map,
-            cmd: self.cmd,
         };
     }
 }
@@ -157,10 +147,6 @@ mod charset {
         assert!(!c.contains(b'c'));
         assert!(c.contains(b'b'));
         assert!(!c.contains(b'd'));
-        for _ in 0..=126 {
-            let cmd = c.addcmd();
-            assert!(c.contains(cmd));
-        }
     }
 
     #[test]
@@ -169,16 +155,14 @@ mod charset {
         for (i, c) in s.chars().enumerate() {
             assert_eq!(i + usize::from(b'a'), c.into());
         }
-        let mut c = Charset::char(b'a');
-        let cmd = c.addcmd();
+        let c = Charset::char(b'a');
         let mut it = c.chars();
         assert_eq!(it.next(), Some(b'a'));
-        assert_eq!(it.next(), Some(cmd));
     }
 
     #[test]
     fn properties() {
-        let mut s = Charset { map: 0, cmd: 0 };
+        let mut s = Charset { map: U256::ZERO };
         assert!(s.empty());
         assert!(!s.ischar());
         s = s | Charset::char(b'a');

@@ -33,4 +33,8 @@ impl CDFA {
 
         return cdfa;
     }
+
+    pub fn end(&self) -> usize {
+        return self.nodes.len();
+    }
 }
