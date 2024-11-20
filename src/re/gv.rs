@@ -12,34 +12,6 @@ pub struct AutomationInfo {
 pub trait Automation {
     fn info(&self) -> AutomationInfo;
     fn contains_edge(&self, a: usize, b: usize, c: u8) -> bool;
-
-    fn traverse(&self, a: usize, s: &[u8]) -> Option<usize> {
-        if s.len() == 0 {
-            return Some(a);
-        }
-        for b in 0..self.info().nodes {
-            if self.contains_edge(a, b, s[0]) {
-                match self.traverse(b, &s[1..]) {
-                    None => {}
-                    c => {
-                        return c;
-                    }
-                };
-            }
-            match self.info().epsilon {
-                Some(c) if self.contains_edge(a, b, c) => {
-                    match self.traverse(b, s) {
-                        None => {}
-                        c => {
-                            return c;
-                        }
-                    };
-                }
-                _ => {}
-            }
-        }
-        None
-    }
 }
 
 pub struct Graphviz<T>(T);

@@ -156,29 +156,3 @@ impl NFA {
         return Ok((a, b));
     }
 }
-
-#[cfg(test)]
-mod nfa {
-    use super::*;
-
-    #[test]
-    fn jist_works() {
-        // tests are small as nfa traversing is very slow
-        let set = Charset::range(b'a', b'z');
-        let n1 = Lexer {
-            iter: b"(ab|(a)c*)z".iter(),
-            charset: set,
-            peekc: 0,
-        };
-        let nfa = NFA::build(n1, 0).unwrap();
-        assert_ne!(nfa.traverse(nfa.begin, b"az"), None);
-        assert_ne!(nfa.traverse(nfa.begin, b"abz"), None);
-        assert_ne!(nfa.traverse(nfa.begin, b"acz"), None);
-        assert_ne!(nfa.traverse(nfa.begin, b"accz"), None);
-        assert_ne!(nfa.traverse(nfa.begin, b"acccz"), None);
-        assert_eq!(nfa.traverse(nfa.begin, b"bz"), None);
-        assert_eq!(nfa.traverse(nfa.begin, b"cz"), None);
-        assert_eq!(nfa.traverse(nfa.begin, b"bcz"), None);
-        assert_eq!(nfa.traverse(nfa.begin, b"abcz"), None);
-    }
-}
