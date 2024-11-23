@@ -12,7 +12,7 @@ features and limitations:
 - `.` matches all characters (including `\n`)
 - character classes use not POSIX syntax, but [perl syntax](https://en.wikipedia.org/wiki/Regular_expression#Character_classes)
 - any characted can be matched by its ascii id
-- `\A` and `\Z` are used to define a capture group (used to specify token id)
+- `(` and `)` do not define groups, `\A` and `\Z` are used for that
 
 ### Metacharacters
 
@@ -48,7 +48,6 @@ features and limitations:
 
 ## Implementation
 
-- `errors.rs` &mdash; define all possible errors (for lexer, parser, etc.)
 - `charset.rs` &mdash; implement charset as a bitmap for all ASCII characters (only used by Lexer and Parser)
 - `lexer.rs` &mdash; implement lexer
 - `build_nfa.rs` &mdash; convert lexer output into 1-nfa ([thompson algorithm](https://en.wikipedia.org/wiki/Thompson%27s_construction) + [resolve epsilon closures](https://www.geeksforgeeks.org/conversion-of-epsilon-nfa-to-nfa/))

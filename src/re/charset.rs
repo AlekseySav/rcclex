@@ -2,7 +2,7 @@
  * Regex Engine for rcclex
  */
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Charset {
     c: u128,
 }
