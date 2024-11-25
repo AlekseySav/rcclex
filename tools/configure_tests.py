@@ -55,6 +55,10 @@ def main():
             loc, expected = None, None
         if loc is not None and loc != '$&':
             continue
+        if re[0] == '^' or re[-1] == '$':
+            continue
+        if '{' in re:
+            continue
         tests.append(ReTestSuite(re, s, (res_map[res], expected)))
     with open('src/re/t.rs', 'w') as f:
         print(SOURCE.format(TESTS=',\n\t'.join(map(str, tests))), file=f)

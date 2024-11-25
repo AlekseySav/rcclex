@@ -2,8 +2,10 @@ use ethnum::U256;
 use std::ops::{BitAnd, BitOr};
 
 /*
- * Charset may contain ascii 7-bit characters
- * as well as up to 126 auxiliary chars
+ * Charset may contain ascii 8-bit characters
+ *
+ * '\xff' used by NFA as epsilon-character
+ * '\x80'-'\xfe' used by regexec as group identifiers
  */
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -14,6 +16,7 @@ pub struct Charset {
 pub struct CharsetIter {
     set: Charset,
     i: u8,
+    done: bool,
 }
 
 impl Charset {
@@ -40,6 +43,7 @@ impl Charset {
         let mut lex = Lexer {
             iter: s.iter(),
             charset: Charset::new().invert(),
+            dot: Charset::new().invert(),
             peekc: 0,
         };
         loop {
@@ -84,7 +88,11 @@ impl Charset {
     }
 
     pub fn chars(self) -> CharsetIter {
-        return CharsetIter { set: self, i: 0 };
+        return CharsetIter {
+            set: self,
+            i: 0,
+            done: false,
+        };
     }
 }
 
@@ -108,22 +116,26 @@ impl BitAnd for Charset {
 
 impl std::fmt::Display for Charset {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "[")?;
         for c in self.chars() {
-            if c < 32 || c > 126 {
+            if c < 32 || c > 126 || c == b'-' || c == b']' {
                 write!(f, "\\{c:o}")?;
             } else {
                 write!(f, "{}", c as char)?;
             }
         }
-        Ok(())
+        write!(f, "]")
     }
 }
 
 impl Iterator for CharsetIter {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
-        while self.i < 255 {
+        while !self.done {
             self.i += 1;
+            if self.i == 255 {
+                self.done = true;
+            }
             if self.set.contains(self.i - 1) {
                 return Some(self.i - 1);
             }
@@ -171,6 +183,14 @@ mod charset {
         s = s | Charset::char(b'b');
         assert!(!s.empty());
         assert!(!s.ischar());
+    }
+
+    #[test]
+    fn full() {
+        let s = Charset::new().invert();
+        for i in 0..=255 {
+            assert!(s.contains(i));
+        }
     }
 
     #[test]

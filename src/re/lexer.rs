@@ -13,6 +13,7 @@ pub enum Token {
 pub struct Lexer<'a> {
     iter: std::slice::Iter<'a, u8>,
     charset: Charset,
+    dot: Charset,
     peekc: u8,
 }
 
@@ -22,7 +23,7 @@ impl Lexer<'_> {
         match c {
             0 => Ok(None),
             b'(' | b')' | b'*' | b'+' | b'|' | b'?' => Ok(Some(Token::Op(c))),
-            b'.' => Ok(Some(Token::Char(self.charset))),
+            b'.' => Ok(Some(Token::Char(self.dot))),
             b'[' => {
                 let s = self.getcharset()?;
                 Ok(Some(self.char_token(s)?))
@@ -104,6 +105,8 @@ impl Lexer<'_> {
     }
 
     fn escaped(&mut self) -> RegexResult<Charset> {
+        let digit: Charset = Charset::range(b'0', b'9');
+
         let mut c = self.char();
         let mut a = 0u8;
         return match c {
@@ -146,6 +149,7 @@ mod lexer {
         let mut lex = Lexer {
             iter: s.iter(),
             charset,
+            dot: charset,
             peekc: 0,
         };
         lex.token()
@@ -157,6 +161,7 @@ mod lexer {
         let mut lex = Lexer {
             iter: hello.iter(),
             charset: Charset::range(b' ', b'~'),
+            dot: Charset::range(b' ', b'~'),
             peekc: 0,
         };
         assert_eq!(lex.token().unwrap(), Some(charset(b"h")));
@@ -186,6 +191,7 @@ mod lexer {
         let mut lex = Lexer {
             iter: s.iter(),
             charset: Charset::range(b'a', b'c'),
+            dot: Charset::range(b'a', b'c'),
             peekc: 0,
         };
         assert_eq!(lex.token().unwrap(), Some(charset(b"bc")));
