@@ -10,16 +10,16 @@ use std::collections::HashMap;
 
 #[derive(Debug, PartialEq)]
 pub struct NFAUncooked {
-    nodes: u32,
-    groups: u32,
-    begin: u32,
-    edges: Vec<(u32, u32, Charset)>,
-    eps_edges: Vec<(u32, u32)>,
-    head: HashMap<u32, u32>,
-    tail: HashMap<u32, u32>,
+    nodes: usize,
+    groups: usize,
+    begin: usize,
+    edges: Vec<(usize, usize, Charset)>,
+    eps_edges: Vec<(usize, usize)>,
+    head: HashMap<usize, usize>,
+    tail: HashMap<usize, usize>,
 }
 
-pub fn nfa_uncooked(mut lex: Lexer) -> RegexResult<NFAUncooked> {
+pub fn nfa_uncooked(mut lex: Lexer) -> Result<NFAUncooked> {
     let mut nfa = NFAUncooked {
         nodes: 0,
         groups: 0,
@@ -34,19 +34,19 @@ pub fn nfa_uncooked(mut lex: Lexer) -> RegexResult<NFAUncooked> {
 }
 
 impl NFAUncooked {
-    fn node(&mut self) -> u32 {
+    fn node(&mut self) -> usize {
         self.nodes += 1;
         return self.nodes - 1;
     }
 
-    fn group(&mut self) -> u32 {
+    fn group(&mut self) -> usize {
         self.groups += 1;
         return self.groups - 1;
     }
 
-    fn join(&mut self, queue: &mut Vec<(u32, u32, u32)>, last: usize) -> RegexResult<()> {
+    fn join(&mut self, queue: &mut Vec<(usize, usize, usize)>, last: usize) -> Result<()> {
         if last == queue.len() {
-            return Err(RegexError::Union);
+            return Err(Error::Union);
         }
         while last < queue.len() - 1 {
             let (b, a) = (queue.pop().unwrap(), queue.pop().unwrap());
@@ -56,7 +56,7 @@ impl NFAUncooked {
         Ok(())
     }
 
-    fn union(&mut self, queue: &mut Vec<(u32, u32, u32)>) {
+    fn union(&mut self, queue: &mut Vec<(usize, usize, usize)>) {
         while queue.len() > 1 {
             let (q, p) = (queue.pop().unwrap(), queue.pop().unwrap());
             let (a, b) = (self.node(), self.node());
@@ -68,7 +68,7 @@ impl NFAUncooked {
         }
     }
 
-    fn copy_last(&mut self, p: (u32, u32, u32)) -> (u32, u32, u32) {
+    fn copy_last(&mut self, p: (usize, usize, usize)) -> (usize, usize, usize) {
         let size = p.2;
         let origin = self.nodes - size;
         self.nodes += size;
@@ -89,25 +89,28 @@ impl NFAUncooked {
         return (p.0 + size, p.1 + size, size);
     }
 
-    fn compile(&mut self, lex: &mut Lexer, scope: u32) -> RegexResult<(u32, u32, u32)> {
-        let mut queue: Vec<(u32, u32, u32)> = Vec::new();
+    fn compile(&mut self, lex: &mut Lexer, scope: usize) -> Result<(usize, usize, usize)> {
+        let mut queue: Vec<(usize, usize, usize)> = Vec::new();
         let mut last_union = 0;
         loop {
             match lex.token()? {
                 Token::Close(eof) => {
                     if (scope == 0) != eof {
-                        return Err(RegexError::Balance);
+                        return Err(Error::Balance);
                     }
                     self.join(&mut queue, last_union)?;
                     self.union(&mut queue);
-                    return queue.pop().ok_or(RegexError::Empty);
+                    return queue.pop().ok_or(Error::Empty);
                 }
 
                 Token::Open => queue.push(self.compile(lex, scope + 1)?),
 
                 Token::Repeat((min, max)) => {
+                    if last_union == queue.len() {
+                        return Err(Error::Postfix);
+                    }
                     let max_bound = max.unwrap_or(min + 1);
-                    let mut a = queue.last().ok_or(RegexError::Group)?.clone();
+                    let mut a = queue.last().ok_or(Error::Group)?.clone();
                     for i in 0..max_bound {
                         if i == min {
                             self.eps_edges.push((a.0, a.1));
@@ -139,7 +142,10 @@ impl NFAUncooked {
                 }
 
                 Token::Group => {
-                    let p = queue.pop().ok_or(RegexError::Group)?;
+                    if queue.len() == last_union {
+                        return Err(Error::Postfix);
+                    }
+                    let p = queue.pop().unwrap();
                     let (a, b, g) = (self.node(), self.node(), self.group());
                     self.head.insert(a, g);
                     self.tail.insert(b, g);
@@ -152,6 +158,26 @@ impl NFAUncooked {
     }
 }
 
+impl Automation for NFAUncooked {
+    fn nodes(&self) -> impl Iterator<Item = (HashSet<usize>, HashSet<usize>)> {
+        let g = |s: &HashMap<usize, usize>, i| match s.get(&i) {
+            None => HashSet::new(),
+            Some(c) => HashSet::from([*c]),
+        };
+        let s: HashSet<usize> = HashSet::new();
+        std::iter::once((s.clone(), s.clone()))
+            .chain((0..self.nodes).map(move |i| (g(&self.head, i), g(&self.tail, i))))
+    }
+
+    fn edges(&self) -> impl Iterator<Item = (usize, usize, Option<u8>)> {
+        self.edges
+            .iter()
+            .flat_map(|(a, b, s)| s.iter().map(|c| (*a + 1, *b + 1, Some(c))))
+            .chain(self.eps_edges.iter().map(|(a, b)| (*a + 1, *b + 1, None)))
+            .chain(std::iter::once((0, self.begin + 1, None)))
+    }
+}
+
 #[cfg(test)]
 mod test_nfa_uncooked {
     use super::*;
@@ -159,12 +185,12 @@ mod test_nfa_uncooked {
 
     #[test]
     fn basic() {
+        let nfa = nfa_uncooked(Lexer::new(b"(a)\\Z|b\\Z")).unwrap();
         /*
          *     2* - 0 -a- 1 - 3*
          * 8 <                 > 9
          *     6* - 4 -b- 5 - 7*
          */
-        let nfa = nfa_uncooked(Lexer::new(b"(a)\\Z|b\\Z")).unwrap();
         assert_eq!(nfa.nodes, 10);
         assert_eq!(nfa.begin, 8);
         assert_eq!(nfa.groups, 2);
@@ -188,13 +214,12 @@ mod test_nfa_uncooked {
             ])
         );
 
+        let nfa = nfa_uncooked(Lexer::new(b"((a|b)c((d)))")).unwrap();
         /*
          *     0 -a- 1
          * 4 <         > 5 - 6 -c- 7 - 8 -d- 9
          *     2 -b- 3
          */
-        println!("here");
-        let nfa = nfa_uncooked(Lexer::new(b"((a|b)c((d)))")).unwrap();
         assert_eq!(nfa.nodes, 10);
         assert_eq!(nfa.begin, 4);
         assert_eq!(nfa.head, HashMap::new());
@@ -300,5 +325,20 @@ mod test_nfa_uncooked {
 
         let nfa2 = nfa_uncooked(Lexer::new(b"a?b*c+d{2,}")).unwrap();
         assert_eq!(nfa, nfa2);
+    }
+
+    fn nfa_err(s: &[u8]) -> Error {
+        return nfa_uncooked(Lexer::new(s)).unwrap_err();
+    }
+
+    #[test]
+    fn errors() {
+        assert_eq!(nfa_err(b"("), Error::Balance);
+        assert_eq!(nfa_err(b"((())))"), Error::Union);
+        assert_eq!(nfa_err(b"a|"), Error::Union);
+        assert_eq!(nfa_err(b"|ada"), Error::Union);
+        assert_eq!(nfa_err(b"\\Z"), Error::Postfix);
+        assert_eq!(nfa_err(b"a|*"), Error::Postfix);
+        assert_eq!(nfa_err(b"a|\\Z"), Error::Postfix);
     }
 }

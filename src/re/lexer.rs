@@ -21,7 +21,7 @@ impl Lexer<'_> {
         };
     }
 
-    pub fn token(&mut self) -> RegexResult<Token> {
+    pub fn token(&mut self) -> Result<Token> {
         match self.char() {
             Some(b'|') => Ok(Token::Union),
             Some(b'(') => Ok(Token::Open),
@@ -48,17 +48,17 @@ impl Lexer<'_> {
         }
     }
 
-    fn repeat(&mut self) -> RegexResult<Token> {
+    fn repeat(&mut self) -> Result<Token> {
         let min = self.atoi(10);
         let min_int = min.unwrap_or(0) as u32;
         match self.char() {
             Some(b',') => (),
             Some(b'}') if min != None => return Ok(Token::Repeat((min_int, Some(min_int)))),
-            _ => return Err(RegexError::Repeat),
+            _ => return Err(Error::Repeat),
         };
         let max = self.atoi(10);
         if self.char() != Some(b'}') || max == Some(0) || min_int > max.unwrap_or(255) as u32 {
-            return Err(RegexError::Repeat);
+            return Err(Error::Repeat);
         }
         Ok(Token::Repeat((
             min_int,
@@ -69,7 +69,7 @@ impl Lexer<'_> {
         )))
     }
 
-    fn charset(&mut self) -> RegexResult<Charset> {
+    fn charset(&mut self) -> Result<Charset> {
         let mut s = charset!();
         let mut prev: Option<u8> = None;
         let inv = match self.char() {
@@ -81,7 +81,7 @@ impl Lexer<'_> {
         };
         loop {
             match self.char() {
-                None => return Err(RegexError::Charset),
+                None => return Err(Error::Charset),
                 Some(b']') if !s.empty() => return Ok(if inv { s.inv() } else { s }),
                 Some(b'\\') => {
                     let p = self.char_escape()?;
@@ -92,7 +92,7 @@ impl Lexer<'_> {
                     let end = match self.char() {
                         Some(b'\\') => self.char_escape()?.iter().next_back().unwrap(),
                         Some(c) => c,
-                        None => return Err(RegexError::Charset),
+                        None => return Err(Error::Charset),
                     };
                     let begin = prev.unwrap();
                     prev = None;
@@ -106,17 +106,17 @@ impl Lexer<'_> {
         }
     }
 
-    fn char_escape(&mut self) -> RegexResult<Charset> {
+    fn char_escape(&mut self) -> Result<Charset> {
         match self.escape()? {
             Token::Char(c) => Ok(c),
-            _ => Err(RegexError::Escape),
+            _ => Err(Error::Escape),
         }
     }
 
-    fn escape(&mut self) -> RegexResult<Token> {
+    fn escape(&mut self) -> Result<Token> {
         let c = self.char();
         match c {
-            None => Err(RegexError::Escape),
+            None => Err(Error::Escape),
             Some(b'Z') => Ok(Token::Group),
             Some(b't') => Ok(Token::Char(charset!(b'\t'))),
             Some(b'n') => Ok(Token::Char(charset!(b'\n'))),
@@ -131,7 +131,7 @@ impl Lexer<'_> {
                 charset!([b'A', b'Z'], [b'a', b'z'], [b'0', b'9']; b'_').inv(),
             )),
             Some(b'x') | Some(b'X') => match self.atoi(16) {
-                None => Err(RegexError::Escape),
+                None => Err(Error::Escape),
                 Some(c) => Ok(Token::Char(charset!(c))),
             },
             Some(c) => Ok(Token::Char(charset!(c))),
@@ -168,7 +168,7 @@ impl Lexer<'_> {
 mod test_lexer {
     use super::*;
 
-    fn onetok(s: &[u8]) -> RegexResult<Token> {
+    fn onetok(s: &[u8]) -> Result<Token> {
         Lexer::new(s).token()
     }
 
@@ -243,15 +243,15 @@ mod test_lexer {
 
     #[test]
     fn errors() {
-        assert_eq!(onetok(b"\\").unwrap_err(), RegexError::Escape);
-        assert_eq!(onetok(b"[").unwrap_err(), RegexError::Charset);
-        assert_eq!(onetok(b"[hello").unwrap_err(), RegexError::Charset);
-        assert_eq!(onetok(b"[i-").unwrap_err(), RegexError::Charset);
-        assert_eq!(onetok(b"{").unwrap_err(), RegexError::Repeat);
-        assert_eq!(onetok(b"{a").unwrap_err(), RegexError::Repeat);
-        assert_eq!(onetok(b"{}").unwrap_err(), RegexError::Repeat);
-        assert_eq!(onetok(b"{0,0}").unwrap_err(), RegexError::Repeat);
-        assert_eq!(onetok(b"\\xq").unwrap_err(), RegexError::Escape);
-        assert_eq!(onetok(b"{a").unwrap_err(), RegexError::Repeat);
+        assert_eq!(onetok(b"\\").unwrap_err(), Error::Escape);
+        assert_eq!(onetok(b"[").unwrap_err(), Error::Charset);
+        assert_eq!(onetok(b"[hello").unwrap_err(), Error::Charset);
+        assert_eq!(onetok(b"[i-").unwrap_err(), Error::Charset);
+        assert_eq!(onetok(b"{").unwrap_err(), Error::Repeat);
+        assert_eq!(onetok(b"{a").unwrap_err(), Error::Repeat);
+        assert_eq!(onetok(b"{}").unwrap_err(), Error::Repeat);
+        assert_eq!(onetok(b"{0,0}").unwrap_err(), Error::Repeat);
+        assert_eq!(onetok(b"\\xq").unwrap_err(), Error::Escape);
+        assert_eq!(onetok(b"{a").unwrap_err(), Error::Repeat);
     }
 }

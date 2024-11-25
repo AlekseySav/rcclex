@@ -1,10 +1,10 @@
 pub mod re {
     use std::collections::HashSet;
 
-    pub type RegexResult<T> = std::result::Result<T, RegexError>;
+    pub type Result<T> = std::result::Result<T, Error>;
 
     #[derive(Debug, Clone, PartialEq)]
-    pub enum RegexError {
+    pub enum Error {
         Charset,
         Escape,
         Repeat,
@@ -16,7 +16,7 @@ pub mod re {
         NoMatch,
     }
 
-    impl std::fmt::Display for RegexError {
+    impl std::fmt::Display for Error {
         fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
             match self {
                 Self::Charset => write!(f, "bad charset syntax"),
@@ -37,8 +37,17 @@ pub mod re {
         fn edges(&self) -> impl Iterator<Item = (usize, usize, Option<u8>)>;
     }
 
-    pub fn nfa_uncooked(s: &[u8]) -> RegexResult<impl Automation> {
+    pub fn nfa_uncooked(s: &[u8]) -> Result<impl Automation> {
         internal::nfa_uncooked(internal::Lexer::new(s))
+    }
+
+    pub fn nfa(s: &[u8]) -> Result<impl Automation> {
+        internal::build_nfa(internal::Lexer::new(s))
+    }
+
+    pub fn dfa(s: &[u8]) -> Result<impl Automation> {
+        use internal::*;
+        Ok(build_dfa(build_nfa(Lexer::new(s))?))
     }
 
     include!("charset.rs");

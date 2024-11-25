@@ -71,6 +71,19 @@ impl DFA {
     }
 }
 
+impl Automation for DFA {
+    fn nodes(&self) -> impl Iterator<Item = (HashSet<usize>, HashSet<usize>)> {
+        (0..self.nodes.len()).map(|n| (self.head[n].clone(), self.tail[n].clone()))
+    }
+
+    fn edges(&self) -> impl Iterator<Item = (usize, usize, Option<u8>)> {
+        self.nodes
+            .iter()
+            .enumerate()
+            .flat_map(|(a, n)| n.iter().map(move |(c, b)| (a, *b, Some(*c))))
+    }
+}
+
 #[cfg(test)]
 mod test_dfa {
     use super::*;
