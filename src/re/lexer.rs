@@ -18,12 +18,12 @@ pub struct Lexer<'a> {
 
 impl Lexer<'_> {
     pub fn new<'a>(s: &'a [u8], config: Config) -> Lexer<'a> {
-        return Lexer {
+        Lexer {
             it: s.iter(),
             peekc: None,
             peek: None,
             config,
-        };
+        }
     }
 
     pub fn token(&mut self) -> Result<Token> {
@@ -68,14 +68,16 @@ impl Lexer<'_> {
     }
 
     fn repeat(&mut self) -> Result<Token> {
-        let min = self.atoi(10);
+        let min = self.atoi(10)?;
         let min_int = min.unwrap_or(0) as u32;
         match self.char() {
             Some(b',') => (),
-            Some(b'}') if min != None => return Ok(Token::Repeat((min_int, Some(min_int)))),
+            Some(b'}') if min != None && min != Some(0) => {
+                return Ok(Token::Repeat((min_int, Some(min_int))))
+            }
             _ => return Err(Error::Repeat),
         };
-        let max = self.atoi(10);
+        let max = self.atoi(10)?;
         if self.char() != Some(b'}') || max == Some(0) || min_int > max.unwrap_or(255) as u32 {
             return Err(Error::Repeat);
         }
@@ -110,6 +112,11 @@ impl Lexer<'_> {
                 Some(b'-') if prev != None => {
                     let end = match self.char() {
                         Some(b'\\') => self.char_escape()?.iter().next_back().unwrap(),
+                        Some(b']') => {
+                            self.peekc = Some(b']');
+                            s.add_char(b'-');
+                            continue;
+                        }
                         Some(c) => c,
                         None => return Err(Error::Charset),
                     };
@@ -137,7 +144,7 @@ impl Lexer<'_> {
             None => Err(Error::Escape),
             Some(b'A') => Ok(Token::StartGroup),
             Some(b'Z') => Ok(Token::EndGroup),
-            Some(b'x') | Some(b'X') => match self.atoi(16) {
+            Some(b'x') | Some(b'X') => match self.atoi(16)? {
                 None => Err(Error::Escape),
                 Some(c) => Ok(Token::Char(charset!(c))),
             },
@@ -148,18 +155,22 @@ impl Lexer<'_> {
         }
     }
 
-    fn atoi(&mut self, base: u8) -> Option<u8> {
+    fn atoi(&mut self, base: u8) -> Result<Option<u8>> {
         let mut res: Option<u8> = None;
         loop {
             match self.char() {
                 Some(c) if Self::digit(c) < base => {
-                    res = Some(res.unwrap_or(0) * base + Self::digit(c))
+                    let r = res.unwrap_or(0);
+                    if r as usize * base as usize > 255 {
+                        return Err(Error::Overflow);
+                    }
+                    res = Some(r * base + Self::digit(c))
                 }
                 Some(c) => {
                     self.peekc = Some(c);
-                    return res;
+                    return Ok(res);
                 }
-                None => return res,
+                None => return Ok(res),
             };
         }
     }
@@ -241,14 +252,15 @@ mod test_lexer {
 
     #[test]
     fn charset() {
-        let mut lex = lexer(b"[][\\]][^]][\\d][^-\\x05][\\s-\\d][--]abc\\n]");
+        let mut lex = lexer(b"[][\\]][^]][\\d][^-\\x05][\\s-\\d][--][abc\\n]");
         let ans = [
             Token::Char(charset!(b'[', b']')),
             Token::Char(charset!(b']').inv()),
             Token::Char(charset!([b'0', b'9'])),
             Token::Char(charset!(b'-', 5).inv()),
             Token::Char(charset!([b'\t', b'9'])),
-            Token::Char(charset!([b'-', b']'], [b'a', b'c']; b'\n')),
+            Token::Char(charset!(b'-')),
+            Token::Char(charset!([b'a', b'c']; b'\n')),
             Token::Close(true),
         ];
         for a in ans {

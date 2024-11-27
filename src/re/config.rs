@@ -17,6 +17,7 @@ pub enum Error {
     Charset,
     Escape,
     Repeat,
+    Overflow,
     Balance,
     Group,
     Union,
@@ -31,6 +32,7 @@ impl std::fmt::Display for Error {
             Self::Charset => write!(f, "bad charset syntax"),
             Self::Escape => write!(f, "invalid escape sequence"),
             Self::Repeat => write!(f, "bad repeat syntax"),
+            Self::Overflow => write!(f, "repeat number or hexadecimal char value exceeds 255"),
             Self::Balance => write!(f, "bad () balance"),
             Self::Group => write!(f, "attempted to define empty expr as a group"),
             Self::Union => write!(f, "invalid usage of '|' or bad () balance"),
@@ -67,7 +69,7 @@ impl Config {
     pub fn is_valid(&self) -> bool {
         for (c, _) in self.esc_charset.iter() {
             match c {
-                b'B'..b'W' | b'Y' | b'a'..b'w' | b'y' | b'z' => (),
+                b'B'..=b'W' | b'Y' | b'a'..=b'w' | b'y' | b'z' => (),
                 _ => return false,
             }
         }
