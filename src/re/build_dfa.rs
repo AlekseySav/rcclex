@@ -90,7 +90,7 @@ mod test_dfa {
 
     #[test]
     fn just_works() {
-        let nfa = build_dfa(build_nfa(Lexer::new(b"a")).unwrap());
+        let nfa = build_dfa(build_nfa(Lexer::new(b"a", Config::default())).unwrap());
         assert_eq!(nfa.nodes.len(), 2);
         assert_eq!(nfa.nodes[0], HashMap::from([(b'a', 1)]));
         assert_eq!(nfa.nodes[1], HashMap::new());

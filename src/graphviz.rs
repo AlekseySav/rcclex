@@ -33,7 +33,7 @@ fn dfs(
     if h.is_empty() && t.is_empty() {
         put(f, format!("  {n} [shape=\"point\"];\n"))?;
     } else {
-        put(f, format!("  {n} [shape=\"circle\", label=\""))?;
+        put(f, format!("  {n} [shape=\"circle\", fontsize=10, label=\""))?;
         for g in h {
             put(f, format!("A{g} "))?;
         }
@@ -61,7 +61,6 @@ where
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut g: HashMap<usize, HashMap<Option<u8>, HashSet<usize>>> = HashMap::new();
         for (a, b, c) in self.0.edges() {
-            println!("{a} {b} {c:?}");
             g.entry(a)
                 .or_insert(HashMap::new())
                 .entry(c)

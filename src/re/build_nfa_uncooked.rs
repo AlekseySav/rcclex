@@ -39,11 +39,6 @@ impl NFAUncooked {
         return self.nodes - 1;
     }
 
-    fn group(&mut self) -> usize {
-        self.groups += 1;
-        return self.groups - 1;
-    }
-
     fn join(&mut self, queue: &mut Vec<(usize, usize, usize)>, last: usize) -> Result<()> {
         if last == queue.len() {
             return Err(Error::Union);
@@ -90,6 +85,7 @@ impl NFAUncooked {
     }
 
     fn compile(&mut self, lex: &mut Lexer, scope: usize) -> Result<(usize, usize, usize)> {
+        let mut groups: Vec<usize> = Vec::new();
         let mut queue: Vec<(usize, usize, usize)> = Vec::new();
         let mut last_union = 0;
         loop {
@@ -141,12 +137,17 @@ impl NFAUncooked {
                     last_union = queue.len();
                 }
 
-                Token::Group => {
+                Token::StartGroup => {
+                    groups.push(self.groups);
+                    self.groups += 1;
+                }
+
+                Token::EndGroup => {
                     if queue.len() == last_union {
                         return Err(Error::Postfix);
                     }
                     let p = queue.pop().unwrap();
-                    let (a, b, g) = (self.node(), self.node(), self.group());
+                    let (a, b, g) = (self.node(), self.node(), groups.pop().ok_or(Error::Group)?);
                     self.head.insert(a, g);
                     self.tail.insert(b, g);
                     self.eps_edges.push((a, p.0));
@@ -183,9 +184,13 @@ mod test_nfa_uncooked {
     use super::*;
     use std::collections::HashSet;
 
+    fn lexer(s: &[u8]) -> Lexer {
+        return Lexer::new(s, Config::default());
+    }
+
     #[test]
     fn basic() {
-        let nfa = nfa_uncooked(Lexer::new(b"(a)\\Z|b\\Z")).unwrap();
+        let nfa = nfa_uncooked(lexer(b"\\A(a)\\Z|\\Ab\\Z")).unwrap();
         /*
          *     2* - 0 -a- 1 - 3*
          * 8 <                 > 9
@@ -214,7 +219,7 @@ mod test_nfa_uncooked {
             ])
         );
 
-        let nfa = nfa_uncooked(Lexer::new(b"((a|b)c((d)))")).unwrap();
+        let nfa = nfa_uncooked(lexer(b"((a|b)c((d)))")).unwrap();
         /*
          *     0 -a- 1
          * 4 <         > 5 - 6 -c- 7 - 8 -d- 9
@@ -241,7 +246,7 @@ mod test_nfa_uncooked {
 
     #[test]
     fn repeats() {
-        let nfa = nfa_uncooked(Lexer::new(b"a{3}")).unwrap();
+        let nfa = nfa_uncooked(lexer(b"a{3}")).unwrap();
         // 0 -a- 1 - 2 -a- 3 - 4 -a- 5
         assert_eq!(nfa.nodes, 6);
         assert_eq!(nfa.begin, 0);
@@ -258,7 +263,7 @@ mod test_nfa_uncooked {
             ]
         );
 
-        let nfa = nfa_uncooked(Lexer::new(b"a{1,2}b{,1}")).unwrap();
+        let nfa = nfa_uncooked(lexer(b"a{1,2}b{,1}")).unwrap();
         // 0 -a- 1 - 2 -a-,- 3 - 4 -b-,- 5
         assert_eq!(nfa.nodes, 6);
         assert_eq!(nfa.begin, 0);
@@ -275,7 +280,7 @@ mod test_nfa_uncooked {
             ]
         );
 
-        let nfa = nfa_uncooked(Lexer::new(b"a{,1}b{,}c{1,}d{2,}")).unwrap();
+        let nfa = nfa_uncooked(lexer(b"a{,1}b{,}c{1,}d{2,}")).unwrap();
         // [  a?  ]    [        b*       ]   [              c+              ]
         // 0 -a-> 1 -> 4 -> 2 -b-> 3 -> 5 -> 6 -c-> 7 -> 10 -> 8 -c-> 9 -> 11
         //   --->             --->                              --->
@@ -323,12 +328,12 @@ mod test_nfa_uncooked {
             ]
         );
 
-        let nfa2 = nfa_uncooked(Lexer::new(b"a?b*c+d{2,}")).unwrap();
+        let nfa2 = nfa_uncooked(lexer(b"a?b*c+d{2,}")).unwrap();
         assert_eq!(nfa, nfa2);
     }
 
     fn nfa_err(s: &[u8]) -> Error {
-        return nfa_uncooked(Lexer::new(s)).unwrap_err();
+        return nfa_uncooked(lexer(s)).unwrap_err();
     }
 
     #[test]
@@ -337,8 +342,9 @@ mod test_nfa_uncooked {
         assert_eq!(nfa_err(b"((())))"), Error::Union);
         assert_eq!(nfa_err(b"a|"), Error::Union);
         assert_eq!(nfa_err(b"|ada"), Error::Union);
-        assert_eq!(nfa_err(b"\\Z"), Error::Postfix);
+        assert_eq!(nfa_err(b"\\A\\Z"), Error::Postfix);
+        assert_eq!(nfa_err(b"a\\Z"), Error::Group);
         assert_eq!(nfa_err(b"a|*"), Error::Postfix);
-        assert_eq!(nfa_err(b"a|\\Z"), Error::Postfix);
+        assert_eq!(nfa_err(b"\\Aa|\\Z"), Error::Postfix);
     }
 }

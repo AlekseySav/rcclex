@@ -9,10 +9,8 @@ features and limitations:
 - non-greedy operators (`*?`, `+?`, `??`) are not supported (as we only perform full matches)
 - lookaheads (`?<=`, `?>=`, `?=`, `?!=`) are not supported
 - word boundaties (`\b`) are not supported
-- `.` matches all characters (including `\n`)
 - character classes use not POSIX syntax, but [perl syntax](https://en.wikipedia.org/wiki/Regular_expression#Character_classes)
 - any characted can be matched by its ascii id
-- `(` and `)` do not define groups, `\A` and `\Z` are used for that
 
 ### Metacharacters
 
@@ -32,17 +30,9 @@ features and limitations:
 | `[^...]`  | match complemented charset                   |
 | `.`       | match any char                               |
 | `\xnn`    | match char with id define by hex number `nn` |
-| `\s`      | match whitespace char                        |
-| `\S`      | complement to `\s`                           |
-| `\d`      | match decimal digit                          |
-| `\D`      | complement to `\d`                           |
-| `\w`      | match alphanumeric char or `_`               |
-| `\W`      | complement to `\w`                           |
-| `\t`      | match tab                                    |
-| `\n`      | match newline                                |
 
 ### Charset
-- All escaped-characters (`sSdDwWtn` and numeric) from previous table are supported in charset
+- All defined escaped-characters
 - Additional escape characters: `\-` and `\]`
 - `a-b` matches any char within range `[a, b]`
 
@@ -51,5 +41,5 @@ features and limitations:
 - `charset.rs` &mdash; implement charset as a bitmap for all ASCII characters (only used by Lexer and Parser)
 - `lexer.rs` &mdash; implement lexer
 - `build_nfa.rs` &mdash; convert lexer output into 1-nfa ([thompson algorithm](https://en.wikipedia.org/wiki/Thompson%27s_construction) + [resolve epsilon closures](https://www.geeksforgeeks.org/conversion-of-epsilon-nfa-to-nfa/))
-- `build_dfa.rs` &mdash; [determinize 1-nfa](https://dsacl3-2020.github.io/slides/fsa-determinization.pdf) and [minimize it](https://en.wikipedia.org/wiki/DFA_minimization)
+- `build_dfa.rs` &mdash; [determinize 1-nfa](https://dsacl3-2020.github.io/slides/fsa-determinization.pdf).
 - `compile.rs` &mdash; provide interface for the compilation pipeline

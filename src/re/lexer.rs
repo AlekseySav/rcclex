@@ -3,7 +3,8 @@ pub enum Token {
     Close(bool),                // eof or (
     Open,                       // )
     Union,                      // |
-    Group,                      // \Z
+    StartGroup,                 // \A
+    EndGroup,                   // \Z
     Repeat((u32, Option<u32>)), // + * ? {...}
     Char(Charset),
 }
@@ -11,22 +12,40 @@ pub enum Token {
 pub struct Lexer<'a> {
     it: std::slice::Iter<'a, u8>,
     peekc: Option<u8>,
+    peek: Option<Token>,
+    config: Config,
 }
 
 impl Lexer<'_> {
-    pub fn new<'a>(s: &'a [u8]) -> Lexer<'a> {
+    pub fn new<'a>(s: &'a [u8], config: Config) -> Lexer<'a> {
         return Lexer {
             it: s.iter(),
             peekc: None,
+            peek: None,
+            config,
         };
     }
 
     pub fn token(&mut self) -> Result<Token> {
+        if self.peek.is_some() {
+            return Ok(core::mem::replace(&mut self.peek, None).unwrap());
+        }
         match self.char() {
+            Some(b'(') => match self.config.auto_groups {
+                true => {
+                    self.peek = Some(Token::Open);
+                    Ok(Token::StartGroup)
+                }
+                false => Ok(Token::Open),
+            },
+            Some(b')') => {
+                if self.config.auto_groups {
+                    self.peek = Some(Token::EndGroup);
+                }
+                Ok(Token::Close(false))
+            }
             Some(b'|') => Ok(Token::Union),
-            Some(b'(') => Ok(Token::Open),
-            Some(b')') => Ok(Token::Close(false)),
-            Some(b'.') => Ok(Token::Char(Charset::ALL)),
+            Some(b'.') => Ok(Token::Char(self.config.dot_charset.clone())),
             Some(b'*') => Ok(Token::Repeat((0, None))),
             Some(b'+') => Ok(Token::Repeat((1, None))),
             Some(b'?') => Ok(Token::Repeat((0, Some(1)))),
@@ -114,27 +133,18 @@ impl Lexer<'_> {
     }
 
     fn escape(&mut self) -> Result<Token> {
-        let c = self.char();
-        match c {
+        match self.char() {
             None => Err(Error::Escape),
-            Some(b'Z') => Ok(Token::Group),
-            Some(b't') => Ok(Token::Char(charset!(b'\t'))),
-            Some(b'n') => Ok(Token::Char(charset!(b'\n'))),
-            Some(b's') => Ok(Token::Char(charset!(b' ', b'\t', b'\r', b'\n'))),
-            Some(b'S') => Ok(Token::Char(charset!(b' ', b'\t', b'\r', b'\n').inv())),
-            Some(b'd') => Ok(Token::Char(charset!([b'0', b'9']))),
-            Some(b'D') => Ok(Token::Char(charset!([b'0', b'9']).inv())),
-            Some(b'w') => Ok(Token::Char(
-                charset!([b'A', b'Z'], [b'a', b'z'], [b'0', b'9']; b'_'),
-            )),
-            Some(b'W') => Ok(Token::Char(
-                charset!([b'A', b'Z'], [b'a', b'z'], [b'0', b'9']; b'_').inv(),
-            )),
+            Some(b'A') => Ok(Token::StartGroup),
+            Some(b'Z') => Ok(Token::EndGroup),
             Some(b'x') | Some(b'X') => match self.atoi(16) {
                 None => Err(Error::Escape),
                 Some(c) => Ok(Token::Char(charset!(c))),
             },
-            Some(c) => Ok(Token::Char(charset!(c))),
+            Some(c) => match self.config.esc_charset.get(&c) {
+                None => Ok(Token::Char(charset!(c))),
+                Some(c) => return Ok(Token::Char(c.clone())),
+            },
         }
     }
 
@@ -168,18 +178,23 @@ impl Lexer<'_> {
 mod test_lexer {
     use super::*;
 
+    fn lexer(s: &[u8]) -> Lexer {
+        return Lexer::new(s, Config::default());
+    }
+
     fn onetok(s: &[u8]) -> Result<Token> {
-        Lexer::new(s).token()
+        lexer(s).token()
     }
 
     #[test]
     fn tokens() {
         let mut lex =
-            Lexer::new(b"()\\Z{18}{1,59}{9,}{,8}*+?|[]].\\x00\\x7f\\x9\\s\\S\\d\\D\\w\\W\\t\\n");
+            lexer(b"()\\A\\Z{18}{1,59}{9,}{,8}*+?|[]].\\x00\\x7f\\x9\\s\\S\\d\\D\\w\\W\\t\\n");
         let ans = [
             Token::Open,
             Token::Close(false),
-            Token::Group,
+            Token::StartGroup,
+            Token::EndGroup,
             Token::Repeat((18, Some(18))),
             Token::Repeat((1, Some(59))),
             Token::Repeat((9, None)),
@@ -217,7 +232,7 @@ mod test_lexer {
                 _ => v.push(c),
             }
         }
-        let mut lex = Lexer::new(&v);
+        let mut lex = lexer(&v);
         for c in 0..128 {
             assert_eq!(lex.token().unwrap(), Token::Char(charset!(c)));
         }
@@ -226,7 +241,7 @@ mod test_lexer {
 
     #[test]
     fn charset() {
-        let mut lex = Lexer::new(b"[][\\]][^]][\\d][^-\\x05][\\s-\\d][--]abc\\n]");
+        let mut lex = lexer(b"[][\\]][^]][\\d][^-\\x05][\\s-\\d][--]abc\\n]");
         let ans = [
             Token::Char(charset!(b'[', b']')),
             Token::Char(charset!(b']').inv()),
@@ -253,5 +268,17 @@ mod test_lexer {
         assert_eq!(onetok(b"{0,0}").unwrap_err(), Error::Repeat);
         assert_eq!(onetok(b"\\xq").unwrap_err(), Error::Escape);
         assert_eq!(onetok(b"{a").unwrap_err(), Error::Repeat);
+    }
+
+    #[test]
+    fn auto_groups() {
+        let mut config = Config::default();
+        config.auto_groups = true;
+        let mut lex = Lexer::new(b"()", config);
+        assert_eq!(lex.token(), Ok(Token::StartGroup));
+        assert_eq!(lex.token(), Ok(Token::Open));
+        assert_eq!(lex.token(), Ok(Token::Close(false)));
+        assert_eq!(lex.token(), Ok(Token::EndGroup));
+        assert_eq!(lex.token(), Ok(Token::Close(true)));
     }
 }

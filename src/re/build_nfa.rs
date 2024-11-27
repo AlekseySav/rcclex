@@ -143,7 +143,7 @@ mod test_nfa {
 
     #[test]
     fn just_works() {
-        let nfa = build_nfa(Lexer::new(b"a")).unwrap();
+        let nfa = build_nfa(Lexer::new(b"a", Config::default())).unwrap();
         assert_eq!(nfa.nodes.len(), 2);
         assert_eq!(nfa.begin, 0);
         assert_eq!(
@@ -169,7 +169,7 @@ mod test_nfa {
 
     #[test]
     fn from_uncooked() {
-        let nfa = build_nfa(Lexer::new(b"(a)\\Z|b\\Z")).unwrap();
+        let nfa = build_nfa(Lexer::new(b"\\A(a)\\Z|\\Ab\\Z", Config::default())).unwrap();
         /*
          * 2* 6* / 3* 7*
          *       -a- 1*
@@ -202,7 +202,7 @@ mod test_nfa {
         assert_eq!(nfa.nodes[1].edges, HashMap::from([]));
         assert_eq!(nfa.nodes[5].edges, HashMap::from([]));
 
-        let nfa = build_nfa(Lexer::new(b"((a|b)c((d)))")).unwrap();
+        let nfa = build_nfa(Lexer::new(b"((a|b)c((d)))", Config::default())).unwrap();
         /*
          *     -a- 1
          * 4 <       > -c- 7 -d- 9
