@@ -68,7 +68,7 @@ impl Lexer<'_> {
     }
 
     fn repeat(&mut self) -> Result<Token> {
-        let min = self.atoi(10)?;
+        let min = self.atoi(10, 3)?;
         let min_int = min.unwrap_or(0) as u32;
         match self.char() {
             Some(b',') => (),
@@ -77,7 +77,7 @@ impl Lexer<'_> {
             }
             _ => return Err(Error::Repeat),
         };
-        let max = self.atoi(10)?;
+        let max = self.atoi(10, 3)?;
         if self.char() != Some(b'}') || max == Some(0) || min_int > max.unwrap_or(255) as u32 {
             return Err(Error::Repeat);
         }
@@ -147,7 +147,7 @@ impl Lexer<'_> {
             None => Err(Error::Escape),
             Some(b'A') => Ok(Token::StartGroup),
             Some(b'Z') => Ok(Token::EndGroup),
-            Some(b'x') | Some(b'X') => match self.atoi(16)? {
+            Some(b'x') | Some(b'X') => match self.atoi(16, 2)? {
                 None => Err(Error::Escape),
                 Some(c) => Ok(Token::Char(charset!(c))),
             },
@@ -158,9 +158,9 @@ impl Lexer<'_> {
         }
     }
 
-    fn atoi(&mut self, base: u8) -> Result<Option<u8>> {
+    fn atoi(&mut self, base: u8, count: usize) -> Result<Option<u8>> {
         let mut res: Option<u8> = None;
-        loop {
+        for _ in 0..count {
             match self.char() {
                 Some(c) if Self::digit(c) < base => {
                     let r = res.unwrap_or(0);
@@ -176,6 +176,7 @@ impl Lexer<'_> {
                 None => return Ok(res),
             };
         }
+        return Ok(res);
     }
 
     fn digit(c: u8) -> u8 {
