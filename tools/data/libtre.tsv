@@ -139,17 +139,11 @@ Ei	[a-c]*	cABbage	(0,5)
 Ei	[^a-c]*	tObAcCo	(0,2)
 Ei	[A-C]*	cABbage	(0,5)
 Ei	[^A-C]*	tObAcCo	(0,2)
-
-{C	C
-
 E	[^-]+	---afd*(&,ml---	(3,12)
 E	[^--Z]+	---AFD*(&,ml---	(6,12)
 Ei	[^--Z]+	---AFD*(&,ml---	(6,10)
 B	[[.foo.]]	foo	ECOLLATE
 B	[[=foo=]]	foo	ECOLLATE
-
-}
-
 B	[[..]]	-	ECOLLATE
 B	[[==]]	-	ECOLLATE
 B	[[.]]	-	ECOLLATE
