@@ -13,18 +13,24 @@ class Test:
     err: bool
 
     @classmethod
-    def make(cls, line: str) -> Test | None:
-        ln = [s for s in line.split('\t') if s != '']
+    def make(cls, ln: List[str]) -> Test | None:
         if '#' in ln[0] or 'E' not in ln[0]:
+            # if 'FIXME' in ln[0]:
+            #     print(f'found fixme test: {ln[1]} {ln[2]}')
             return None
         if len(ln) != 4:
-            print(f'bad test: {line}')
+            print(f'bad test: {"\t".join(ln)}')
             return None
-        if ln[1][0] == '^' or ln[1][-1] == '$':
+        if ln[1][0] == '^' or ln[1][-1] == '$' or 'NOMATCH' in ln[3] or '(?' in ln[1]:
             return None
+        if 'i' in ln[0]:
+            ln[1] = ln[1].upper()
+            ln[2] = ln[2].upper()
         if '$' not in ln[0]:
             ln[1] = ln[1].replace('\\', '\\\\')
             ln[2] = ln[2].replace('\\', '\\\\')
+        ln[1] = ln[1].replace('"', '\\"')
+        ln[2] = ln[2].replace('"', '\\"')
         if ln[2] == 'NULL':
             ln[2] = ''
         err = ln[3][0] != '('
@@ -43,9 +49,15 @@ class Test:
 def add_tests(file):
     tests: List[Test] = []
     skipped = 0
+    prev = []
     with open(file) as f:
         for line in f:
-            t = Test.make(line)
+            ln = [i for i in line.split('\t') if i != '']
+            for i in range(len(ln)):
+                if ln[i] == 'SAME':
+                    ln[i] = prev[i]
+            prev = ln
+            t = Test.make(ln)
             if t is None:
                 skipped += 1
             else:
@@ -58,7 +70,7 @@ def main():
     skipped: int = 0
     for f in glob.glob('tools/data/*.tsv'):
         t, s = add_tests(f)
-        print(f'tests suites from "{f}", configured tests: {len(t)}, skipped: {s}')
+        print(f'processed tests from "{f}", configured tests: {len(t)}, skipped: {s}')
         tests += t
         skipped += s
 

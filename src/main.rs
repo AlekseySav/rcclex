@@ -7,7 +7,7 @@ fn main() {
         "{}",
         Graphviz(re::build_dfa(
             re::build_nfa(re::Lexer::new(
-                b"\\A(\\A(a?)\\Z{2})\\Z",
+                b"\\A((\\A(a?)\\Z){2})\\Z",
                 re::Config::default(),
             ))
             .unwrap()

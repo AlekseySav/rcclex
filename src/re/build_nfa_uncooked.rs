@@ -81,6 +81,16 @@ impl NFAUncooked {
             }
             self.eps_edges.push((a + size, b + size));
         }
+        for i in origin..self.nodes - size {
+            match self.head.get(&i) {
+                Some(g) => _ = self.head.insert(i + size, *g),
+                _ => (),
+            }
+            match self.tail.get(&i) {
+                Some(g) => _ = self.tail.insert(i + size, *g),
+                _ => (),
+            }
+        }
         return (p.0 + size, p.1 + size, size);
     }
 

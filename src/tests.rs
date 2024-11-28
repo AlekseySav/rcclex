@@ -83,11 +83,11 @@ pub mod att_re_tests {
         );
     }
 
-    fn graphviz_dfa(s: &[u8]) -> Graphviz<re::DFA> {
-        let mut c = re::Config::default();
-        c.auto_groups = true;
-        Graphviz(re::build_dfa(re::build_nfa(re::Lexer::new(s, c)).unwrap()))
-    }
+    // fn graphviz_dfa(s: &[u8]) -> Graphviz<re::DFA> {
+    //     let mut c = re::Config::default();
+    //     c.auto_groups = true;
+    //     Graphviz(re::build_dfa(re::build_nfa(re::Lexer::new(s, c)).unwrap()))
+    // }
 
     #[test]
     fn run_all() {

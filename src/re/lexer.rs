@@ -121,6 +121,9 @@ impl Lexer<'_> {
                         None => return Err(Error::Charset),
                     };
                     let begin = prev.unwrap();
+                    if end < begin {
+                        return Err(Error::Charset);
+                    }
                     prev = None;
                     s.add_range(begin, end);
                 }
